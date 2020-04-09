@@ -79,5 +79,5 @@ define Build/InstallDev
 	gunzip -c $(PKG_BUILD_DIR)/mt7623n_bpir2-preloader.bin.gz > $(STAGING_DIR_IMAGE)/mt7623n_bpir2-preloader.bin
 endef
 
-$(eval $(call BuildPackage,mt7623n-preloader))
-$(eval $(call BuildPackage,mt7622-preloader))
+#$(eval $(call BuildPackage,mt7623n-preloader))
+#$(eval $(call BuildPackage,mt7622-preloader))

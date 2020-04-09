@@ -50,4 +50,4 @@ define Build/InstallDev
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(UBOOT_IMAGE) $(STAGING_DIR_IMAGE)/$(BUILD_VARIANT)-$(UBOOT_IMAGE)
 endef
 
-$(eval $(call BuildPackage/U-Boot))
+#$(eval $(call BuildPackage/U-Boot))
