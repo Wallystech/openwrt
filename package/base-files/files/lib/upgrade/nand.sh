@@ -12,6 +12,9 @@ CI_UBIPART="${CI_UBIPART:-ubi}"
 # 'rootfs' UBI volume on NAND contains the rootfs
 CI_ROOTPART="${CI_ROOTPART:-rootfs}"
 
+# ipq807x qsdk kernel misbehaves
+CI_IPQ807X=0
+
 ubi_mknod() {
 	local dir="$1"
 	local dev="/dev/$(basename $dir)"
@@ -131,6 +134,8 @@ nand_upgrade_prepare_ubi() {
 		return 1
 	fi
 
+	[ "$CI_IPQ807X" = 1 ] && ubidetach -f -m $mtdnum
+
 	local ubidev="$( nand_find_ubi "$CI_UBIPART" )"
 	if [ ! "$ubidev" ]; then
 		ubiattach -m "$mtdnum"
@@ -213,7 +218,6 @@ nand_upgrade_prepare_ubi() {
 
 nand_do_upgrade_success() {
 	local conf_tar="/tmp/sysupgrade.tgz"
-
 	sync
 	[ -f "$conf_tar" ] && nand_restore_config "$conf_tar"
 	echo "sysupgrade successful"
@@ -292,10 +296,12 @@ nand_upgrade_tar() {
 	local has_kernel=1
 	local has_env=0
 
-	[ "$kernel_length" != 0 -a -n "$kernel_mtd" ] && {
-		tar xf "$tar_file" ${board_dir}/kernel -O | mtd write - $CI_KERNPART
+	[ "$CI_IPQ807X" = 0 -a "$kernel_length" != 0 -a -n "$kernel_mtd" ] && {
+		tar xf $tar_file ${board_dir}/kernel -O | mtd write - $CI_KERNPART
 	}
-	[ "$kernel_length" = 0 -o ! -z "$kernel_mtd" ] && has_kernel=
+	[ "$CI_IPQ807X" = 0 ] && {
+		[ "$kernel_length" = 0 -o ! -z "$kernel_mtd" ] && has_kernel=
+	}
 
 	nand_upgrade_prepare_ubi "$rootfs_length" "$rootfs_type" "${has_kernel:+$kernel_length}" "$has_env"
 
