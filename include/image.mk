@@ -179,6 +179,10 @@ define Image/pad-root-squashfs
 	$(call Image/pad-to,$(KDIR)/root.squashfs,$(if $(1),$(1),$(ROOTFS_PARTSIZE)))
 endef
 
+ifeq ($(CONFIG_IPQ_MEM_PROFILE),512)
+DTC_CFLAGS = -D __IPQ_MEM_PROFILE_512_MB__
+endif
+
 # $(1) source dts file
 # $(2) target dtb file
 # $(3) extra CPP flags
@@ -188,7 +192,7 @@ define Image/BuildDTB
 		-I$(DTS_DIR) \
 		-I$(DTS_DIR)/include \
 		-I$(LINUX_DIR)/include/ \
-		-undef -D__DTS__ $(3) \
+		-undef -D__DTS__ $(DTC_CFLAGS) $(3) \
 		-o $(2).tmp $(1)
 	$(LINUX_DIR)/scripts/dtc/dtc -O dtb \
 		-i$(dir $(1)) $(DTC_FLAGS) $(4) \

@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+
+START=30
+
+boot() {
+	. /lib/functions.sh
+
+	case "$(board_name)" in
+	cig,wf194c)
+		aq-fw-download /lib/firmware/AQR-G4_v5.4.B-AQR_CIG_WIFI_ID44715_VER1673.cld miireg 0 > /dev/null
+		sleep 1
+		ssdk_sh debug phy set 0 0x4004c441 0x8
+		;;
+	esac
+}

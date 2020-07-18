@@ -2,6 +2,15 @@
 #
 # Copyright (C) 2006-2014 OpenWrt.org
 
+config KERNEL_IPQ_MEM_PROFILE
+	int "Different memory profile "
+	range 0 1024
+	default 512
+	depends on TARGET_ipq807x
+	help
+	  This option select memory profile to be used,which defines
+	  the reserved memory configuration used in device tree.
+
 config KERNEL_BUILD_USER
 	string "Custom Kernel Build User Name"
 	default "builder" if BUILDBOT
