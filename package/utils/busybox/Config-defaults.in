@@ -2182,7 +2182,7 @@ config BUSYBOX_DEFAULT_VOLNAME
 	default n
 config BUSYBOX_DEFAULT_WATCHDOG
 	bool
-	default n
+	default y
 config BUSYBOX_DEFAULT_FEATURE_IPV6
 	bool
 	default y if IPV6
