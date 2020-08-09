@@ -7,6 +7,7 @@ ubootenv=""
 ubinize_param=""
 kernel=""
 rootfs=""
+rootfs_name="rootfs"
 outfile=""
 err=""
 ubinize_seq=""
@@ -76,7 +77,7 @@ ubilayout() {
 		rootsize="$( round_up "$( stat -c%s "$2" )" 1024 )"
 		;;
 	esac
-	ubivol $vol_id rootfs "$2" "$autoresize" "$rootsize"
+	ubivol $vol_id $rootfs_name "$2" "$autoresize" "$rootsize"
 
 	vol_id=$(( $vol_id + 1 ))
 	[ "$rootfs_type" = "ubifs" ] || ubivol $vol_id rootfs_data "" 1
@@ -97,6 +98,12 @@ while [ "$1" ]; do
 		;;
 	"--kernel")
 		kernel="$2"
+		shift
+		shift
+		continue
+		;;
+	"--rootfs_name")
+		rootfs_name="$2"
 		shift
 		shift
 		continue

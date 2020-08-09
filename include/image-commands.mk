@@ -86,6 +86,7 @@ define Build/append-ubi
 	sh $(TOPDIR)/scripts/ubinize-image.sh \
 		$(if $(UBOOTENV_IN_UBI),--uboot-env) \
 		$(if $(KERNEL_IN_UBI),--kernel $(IMAGE_KERNEL)) \
+		$(if $(ROOTFSNAME_IN_UBI),--rootfs_name $(ROOTFSNAME_IN_UBI)) \
 		$(foreach part,$(UBINIZE_PARTS),--part $(part)) \
 		$(IMAGE_ROOTFS) \
 		$@.tmp \
