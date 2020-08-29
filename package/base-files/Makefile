@@ -209,6 +209,7 @@ define Package/base-files/install
 
 	$(if $(CONFIG_TARGET_PREINIT_DISABLE_FAILSAFE), \
 		rm -f $(1)/etc/banner.failsafe,)
+	$(CP) $(1)/etc/openwrt_release $(TOPDIR)/tmp/
 endef
 
 ifneq ($(DUMP),1)

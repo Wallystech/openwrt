@@ -3,6 +3,18 @@ export LANG=C
 export LC_ALL=C
 [ -n "$TOPDIR" ] && cd $TOPDIR
 
+[ "$1" = "wlan-ap" ] && {
+	cd ..
+	git log -n 1 --format="%h"
+	exit 0
+}
+
+[ "$1" = "wlan-ap-version" ] && {
+	cd ..
+	git tag --points-at HEAD
+	exit 0
+}
+
 GET_REV=$1
 
 try_version() {

@@ -62,7 +62,7 @@ def load_yaml(fname: str, profile: dict, include = True):
 
     if "include" in new and include:
         for i in range(len(new["include"])):
-            profile = load_yaml(new["include"][i], profile, False)
+            profile = load_yaml(new["include"][i], profile)
     return profile
 
 

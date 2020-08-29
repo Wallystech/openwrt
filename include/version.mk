@@ -56,6 +56,11 @@ VERSION_PRODUCT:=$(if $(VERSION_PRODUCT),$(VERSION_PRODUCT),Generic)
 VERSION_HWREV:=$(call qstrip,$(CONFIG_VERSION_HWREV))
 VERSION_HWREV:=$(if $(VERSION_HWREV),$(VERSION_HWREV),v0)
 
+VERSION_TIP:=$(shell $(TOPDIR)/scripts/getver.sh wlan-ap)
+
+VERSION_TIP_VERSION:=$(shell $(TOPDIR)/scripts/getver.sh wlan-ap-version)
+VERSION_TIP_VERSION:=$(if $(VERSION_TIP_VERSION),$(VERSION_TIP_VERSION),devel)
+
 define taint2sym
 $(CONFIG_$(firstword $(subst :, ,$(subst +,,$(subst -,,$(1))))))
 endef
@@ -104,5 +109,7 @@ VERSION_SED_SCRIPT:=$(SED) 's,%U,$(call sed_escape,$(VERSION_REPO)),g' \
 	-e 's,%u,$(call sed_escape,$(VERSION_HOME_URL)),g' \
 	-e 's,%s,$(call sed_escape,$(VERSION_SUPPORT_URL)),g' \
 	-e 's,%P,$(call sed_escape,$(VERSION_PRODUCT)),g' \
+	-e 's,%a,$(call sed_escape,$(VERSION_TIP)),g' \
+	-e 's,%x,$(call sed_escape,$(VERSION_TIP_VERSION)),g' \
 	-e 's,%h,$(call sed_escape,$(VERSION_HWREV)),g'
 
