@@ -60,6 +60,7 @@ $(curdir)/merge-index: $(curdir)/merge
 
 ifndef SDK
   $(curdir)/compile: $(curdir)/system/opkg/host/compile
+  $(patsubst %,$(curdir)/%/compile,$(filter-out %/apk/host,$($(curdir)/builddirs))): $(curdir)/system/apk/host/compile
 endif
 
 $(curdir)/install: $(TMP_DIR)/.build $(curdir)/merge $(if $(CONFIG_TARGET_PER_DEVICE_ROOTFS),$(curdir)/merge-index)
@@ -84,6 +85,7 @@ $(curdir)/index: FORCE
 	@for d in $(PACKAGE_SUBDIRS); do ( \
 		mkdir -p $$d; \
 		cd $$d || continue; \
+		$(SCRIPT_DIR)/apk-make-index.sh . 2>&1; \
 		$(SCRIPT_DIR)/ipkg-make-index.sh . 2>&1 > Packages.manifest; \
 		grep -vE '^(Maintainer|LicenseFiles|Source|SourceName|Require|SourceDateEpoch)' Packages.manifest > Packages; \
 		case "$$(((64 + $$(stat -L -c%s Packages)) % 128))" in 110|111) \
