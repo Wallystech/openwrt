@@ -10,6 +10,10 @@ LLDPSOCKET=/var/run/lldpd.socket
 LLDPD_CONF=/tmp/lldpd.conf
 LLDPD_CONFS_DIR=/tmp/lldpd.d
 
+service_triggers() {
+	procd_add_reload_trigger lldpd
+}
+
 find_release_info()
 {
 	[ -s /etc/os-release ] && . /etc/os-release
@@ -37,7 +41,7 @@ write_lldpd_conf()
 	local iface ifnames=""
 	for iface in $ifaces; do
 		local ifname=""
-		if network_get_device ifname "$iface" || [ -e "/sys/class/net/$iface" ]; then
+		if [ -e "/sys/class/net/$iface" ]; then
 			append ifnames "${ifname:-$iface}" ","
 		fi
 	done
@@ -58,6 +62,7 @@ write_lldpd_conf()
 
 start_service() {
 
+	local enable
 	local enable_cdp
 	local enable_fdp
 	local enable_sonmp
@@ -68,6 +73,10 @@ start_service() {
 	local agentxsocket
 
 	config_load 'lldpd'
+	config_get_bool enable 'config' 'enable' 0
+
+	[ "$enable" -eq 1 ] || return
+
 	config_get_bool enable_cdp 'config' 'enable_cdp' 0
 	config_get_bool enable_fdp 'config' 'enable_fdp' 0
 	config_get_bool enable_sonmp 'config' 'enable_sonmp' 0
@@ -101,24 +110,7 @@ start_service() {
 }
 
 reload_service() {
-	running || return 1
-	$LLDPCLI -u $LLDPSOCKET &> /dev/null <<-EOF
-		pause
-		unconfigure lldp custom-tlv
-		unconfigure system interface pattern
-		unconfigure system description
-		unconfigure system hostname
-		unconfigure system ip management pattern
-	EOF
-	# Rewrite lldpd.conf
-	# If something changed it should be included by the lldpcli call
-	write_lldpd_conf
-	$LLDPCLI -u $LLDPSOCKET -c $LLDPD_CONF -c $LLDPD_CONFS_DIR &> /dev/null
-	# Broadcast update over the wire
-	$LLDPCLI -u $LLDPSOCKET &> /dev/null <<-EOF
-		resume
-		update
-	EOF
+	restart
 	return 0
 }
 
