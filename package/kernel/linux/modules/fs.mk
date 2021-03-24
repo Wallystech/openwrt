@@ -53,7 +53,8 @@ define KernelPackage/fs-autofs4
 	CONFIG_AUTOFS4_FS \
 	CONFIG_AUTOFS_FS
   FILES:= \
-	$(LINUX_DIR)/fs/autofs/autofs4.ko
+	$(LINUX_DIR)/fs/autofs4/autofs4.ko@lt4.18 \
+	$(LINUX_DIR)/fs/autofs/autofs4.ko@ge4.18
   AUTOLOAD:=$(call AutoLoad,30,autofs4)
 endef
 

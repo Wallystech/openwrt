@@ -153,6 +153,7 @@ endif
 
 
 # Disable noisy checks by default as in upstream
+ifeq ($(strip $(call kernel_patchver_ge,4.5.0)),1)
 DTC_FLAGS += \
   -Wno-unit_address_vs_reg \
   -Wno-simple_bus_reg \
@@ -165,6 +166,7 @@ DTC_FLAGS += \
   -Wno-graph_child_address \
   -Wno-graph_port \
   -Wno-unique_unit_address
+endif
 
 define Image/pad-to
 	dd if=$(1) of=$(1).new bs=$(2) conv=sync

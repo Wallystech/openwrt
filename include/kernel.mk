@@ -44,7 +44,7 @@ else
     FILES_DIR ?= $(foreach dir,$(wildcard $(CURDIR)/files $(CURDIR)/files-$(KERNEL_PATCHVER)),"$(dir)")
   endif
   KERNEL_BUILD_DIR ?= $(BUILD_DIR)/linux-$(BOARD)$(if $(SUBTARGET),_$(SUBTARGET))
-  LINUX_DIR ?= $(KERNEL_BUILD_DIR)/linux-$(LINUX_VERSION)
+  LINUX_DIR ?= $(KERNEL_BUILD_DIR)/linux-$(LINUX_VERSION)$(KERNEL_NAME_SUFFIX)
   LINUX_UAPI_DIR=uapi/
   LINUX_VERMAGIC:=$(strip $(shell cat $(LINUX_DIR)/.vermagic 2>/dev/null))
   LINUX_VERMAGIC:=$(if $(LINUX_VERMAGIC),$(LINUX_VERMAGIC),unknown)
@@ -59,7 +59,7 @@ else
   ifneq (,$(findstring -rc,$(LINUX_VERSION)))
       LINUX_SOURCE:=linux-$(LINUX_VERSION).tar.gz
   else
-      LINUX_SOURCE:=linux-$(LINUX_VERSION).tar.xz
+      LINUX_SOURCE:=linux-$(LINUX_VERSION)$(KERNEL_NAME_SUFFIX).tar.xz
   endif
 
   ifneq (,$(findstring -rc,$(LINUX_VERSION)))
@@ -100,8 +100,9 @@ endif
 
 KERNEL_MAKE = $(MAKE) $(KERNEL_MAKEOPTS)
 
+	#KCFLAGS="$(call iremap,$(BUILD_DIR),$(notdir $(BUILD_DIR)))" \
+
 KERNEL_MAKE_FLAGS = \
-	KCFLAGS="$(call iremap,$(BUILD_DIR),$(notdir $(BUILD_DIR)))" \
 	HOSTCFLAGS="$(HOST_CFLAGS) -Wall -Wmissing-prototypes -Wstrict-prototypes" \
 	CROSS_COMPILE="$(KERNEL_CROSS)" \
 	ARCH="$(LINUX_KARCH)" \
