@@ -24,22 +24,29 @@ usage() {
 	printf "\n\t-a ==> set load address to 'addr' (hex)"
 	printf "\n\t-e ==> set entry point to 'entry' (hex)"
 	printf "\n\t-f ==> set device tree compatible string"
+	printf "\n\t-i ==> include initrd Blob 'initrd'"
 	printf "\n\t-v ==> set kernel version to 'version'"
 	printf "\n\t-k ==> include kernel image 'kernel'"
 	printf "\n\t-D ==> human friendly Device Tree Blob 'name'"
 	printf "\n\t-n ==> fdt unit-address 'address'"
 	printf "\n\t-d ==> include Device Tree Blob 'dtb'"
-	printf "\n\t-r ==> include RootFS blob"
+	printf "\n\t-r ==> include RootFS blob 'rootfs'"
 	printf "\n\t-H ==> specify hash algo instead of SHA1"
-	printf "\n\t-o ==> create output file 'its_file'\n"
+	printf "\n\t-o ==> create output file 'its_file'"
+	printf "\n\t-O ==> create config with dt overlay 'name:dtb'"
+	printf "\n\t\t(can be specified more than once)\n"
 	exit 1
 }
 
 FDTNUM=1
 ROOTFSNUM=1
+INITRDNUM=1
 HASH=sha1
+LOADABLES=
+DTOVERLAY=
+DTADDR=
 
-while getopts ":A:a:c:C:D:d:e:f:k:n:o:v:r:S" OPTION
+while getopts ":A:a:c:C:D:d:e:f:i:k:n:o:O:v:r:S" OPTION
 do
 	case $OPTION in
 		A ) ARCH=$OPTARG;;
@@ -50,9 +57,11 @@ do
 		d ) DTB=$OPTARG;;
 		e ) ENTRY_ADDR=$OPTARG;;
 		f ) COMPATIBLE=$OPTARG;;
+		i ) INITRD=$OPTARG;;
 		k ) KERNEL=$OPTARG;;
 		n ) FDTNUM=$OPTARG;;
 		o ) OUTPUT=$OPTARG;;
+		O ) DTOVERLAY="$DTOVERLAY ${OPTARG}";;
 		r ) ROOTFS=$OPTARG;;
 		S ) HASH=$OPTARG;;
 		v ) VERSION=$OPTARG;;
@@ -74,14 +83,20 @@ if [ -n "${COMPATIBLE}" ]; then
 	COMPATIBLE_PROP="compatible = \"${COMPATIBLE}\";"
 fi
 
+[ "$DTOVERLAY" ] && {
+	dtbsize=$(wc -c "$DTB" | cut -d' ' -f1)
+	DTADDR=$(printf "0x%08x" $(($LOAD_ADDR - $dtbsize)) )
+}
+
 # Conditionally create fdt information
 if [ -n "${DTB}" ]; then
 	FDT_NODE="
-		fdt@$FDTNUM {
+		fdt-$FDTNUM {
 			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree blob\";
 			${COMPATIBLE_PROP}
 			data = /incbin/(\"${DTB}\");
 			type = \"flat_dt\";
+			${DTADDR:+load = <${DTADDR}>;}
 			arch = \"${ARCH}\";
 			compression = \"none\";
 			hash@1 {
@@ -92,13 +107,34 @@ if [ -n "${DTB}" ]; then
 			};
 		};
 "
-	FDT_PROP="fdt = \"fdt@$FDTNUM\";"
+	FDT_PROP="fdt = \"fdt-$FDTNUM\";"
 fi
+
+if [ -n "${INITRD}" ]; then
+	INITRD_NODE="
+		initrd-$INITRDNUM {
+			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} initrd\";
+			${COMPATIBLE_PROP}
+			data = /incbin/(\"${INITRD}\");
+			type = \"ramdisk\";
+			arch = \"${ARCH}\";
+			os = \"linux\";
+			hash@1 {
+				algo = \"crc32\";
+			};
+			hash@2 {
+				algo = \"${HASH}\";
+			};
+		};
+"
+	INITRD_PROP="ramdisk=\"initrd-${INITRDNUM}\";"
+fi
+
 
 if [ -n "${ROOTFS}" ]; then
 	dd if="${ROOTFS}" of="${ROOTFS}.pagesync" bs=4096 conv=sync
 	ROOTFS_NODE="
-		rootfs@$ROOTFSNUM {
+		rootfs-$ROOTFSNUM {
 			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} rootfs\";
 			${COMPATIBLE_PROP}
 			data = /incbin/(\"${ROOTFS}.pagesync\");
@@ -113,8 +149,49 @@ if [ -n "${ROOTFS}" ]; then
 			};
 		};
 "
-	ROOTFS_PROP="loadables = \"rootfs@${ROOTFSNUM}\";"
+	LOADABLES="${LOADABLES:+$LOADABLES, }\"rootfs-${ROOTFSNUM}\""
 fi
+
+# add DT overlay blobs
+FDTOVERLAY_NODE=""
+OVCONFIGS=""
+[ "$DTOVERLAY" ] && for overlay in $DTOVERLAY ; do
+	overlay_blob=${overlay##*:}
+	ovname=${overlay%%:*}
+	ovnode="fdt-$ovname"
+	ovsize=$(wc -c "$overlay_blob" | cut -d' ' -f1)
+	echo "$ovname ($overlay_blob) : $ovsize" >&2
+	DTADDR=$(printf "0x%08x" $(($DTADDR - $ovsize)))
+	FDTOVERLAY_NODE="$FDTOVERLAY_NODE
+
+		$ovnode {
+			description = \"${ARCH_UPPER} OpenWrt ${DEVICE} device tree overlay $ovname\";
+			${COMPATIBLE_PROP}
+			data = /incbin/(\"${overlay_blob}\");
+			type = \"flat_dt\";
+			arch = \"${ARCH}\";
+			load = <${DTADDR}>;
+			compression = \"none\";
+			hash@1 {
+				algo = \"crc32\";
+			};
+			hash@2 {
+				algo = \"${HASH}\";
+			};
+		};
+"
+	OVCONFIGS="$OVCONFIGS
+
+		config-$ovname {
+			description = \"OpenWrt ${DEVICE} with $ovname\";
+			kernel = \"kernel-1\";
+			fdt = \"fdt-$FDTNUM\", \"$ovnode\";
+			${LOADABLES:+loadables = ${LOADABLES};}
+			${COMPATIBLE_PROP}
+			${INITRD_PROP}
+		};
+	"
+done
 
 # Create a default, fully populated DTS file
 DATA="/dts-v1/;
@@ -124,7 +201,7 @@ DATA="/dts-v1/;
 	#address-cells = <1>;
 
 	images {
-		kernel@1 {
+		kernel-1 {
 			description = \"${ARCH_UPPER} OpenWrt Linux-${VERSION}\";
 			data = /incbin/(\"${KERNEL}\");
 			type = \"kernel\";
@@ -140,7 +217,9 @@ DATA="/dts-v1/;
 				algo = \"$HASH\";
 			};
 		};
+${INITRD_NODE}
 ${FDT_NODE}
+${FDTOVERLAY_NODE}
 ${ROOTFS_NODE}
 	};
 
@@ -148,11 +227,13 @@ ${ROOTFS_NODE}
 		default = \"${CONFIG}\";
 		${CONFIG} {
 			description = \"OpenWrt ${DEVICE}\";
-			kernel = \"kernel@1\";
+			kernel = \"kernel-1\";
 			${FDT_PROP}
-			${ROOTFS_PROP}
+			${LOADABLES:+loadables = ${LOADABLES};}
 			${COMPATIBLE_PROP}
+			${INITRD_PROP}
 		};
+		${OVCONFIGS}
 	};
 };"
 

@@ -203,7 +203,7 @@ define Build/fit
 		$(if $(word 3,$(1)),-r $(IMAGE_ROOTFS) -f $(subst _,$(comma),$(DEVICE_NAME))) \
 		-a $(KERNEL_LOADADDR) -e $(if $(KERNEL_ENTRY),$(KERNEL_ENTRY),$(KERNEL_LOADADDR)) \
 		$(if $(DEVICE_FDT_NUM),-n $(DEVICE_FDT_NUM)) \
-		-c $(if $(DEVICE_DTS_CONFIG),$(DEVICE_DTS_CONFIG),"config@1") \
+		-c $(if $(DEVICE_DTS_CONFIG),$(DEVICE_DTS_CONFIG),"config-1") \
 		-A $(LINUX_KARCH) -v $(LINUX_VERSION)
 	PATH=$(LINUX_DIR)/scripts/dtc:$(PATH) mkimage $(if $(word 3,$(1)),-E -B 0x1000 -p 0x1000) -f $@.its $@.new
 	@mv $@.new $@
