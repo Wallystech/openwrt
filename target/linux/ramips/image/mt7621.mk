@@ -1271,6 +1271,16 @@ define Device/tplink_eap235-wall-v1
 endef
 TARGET_DEVICES += tplink_eap235-wall-v1
 
+define Device/tplink_ex228
+  $(Device/uimage-lzma-loader)
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := EX228 
+  DEVICE_PACKAGES := kmod-mt7915e
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata | check-size
+  IMAGE_SIZE=20000k
+endef
+TARGET_DEVICES += tplink_ex228
+
 define Device/tplink_re350-v1
   $(Device/dsa-migration)
   $(Device/tplink-safeloader)
