@@ -777,12 +777,14 @@ dhcp_relay_add() {
 	[ -n "$server_addr" ] || return 0
 
 	config_get interface "$cfg" interface
-	if [ -z "$interface" ]; then
-		xappend "--dhcp-relay=$local_addr,$server_addr"
-	else
+	config_get suboption1 "$cfg" suboption1
+	config_get suboption2 "$cfg" suboption2
+	config_get suboption151 "$cfg" suboption151
+	config_get suboption152 "$cfg" suboption152
+	if [ -n "$interface" ]; then
 		network_get_device ifname "$interface" || return
-		xappend "--dhcp-relay=$local_addr,$server_addr,$ifname"
 	fi
+	xappend "--dhcp-relay=$local_addr,$server_addr,$ifname,$suboption1,$suboption2,$suboption151,$suboption152"
 }
 
 dnsmasq_ipset_add() {
