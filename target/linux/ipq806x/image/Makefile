@@ -142,7 +142,7 @@ define Device/edgecore_ecw5410
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
 	DEVICE_DTS_CONFIG := config@v2.0-ap160
-	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-edgecore_ecw5410
+	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-edgecore_ecw5410 kmod-i2c-gpio
 endef
 TARGET_DEVICES += edgecore_ecw5410
 

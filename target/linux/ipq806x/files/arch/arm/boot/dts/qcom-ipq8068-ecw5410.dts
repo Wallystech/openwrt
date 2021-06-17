@@ -95,6 +95,16 @@
 			gpios = <&qcom_pinmux 59 GPIO_ACTIVE_LOW>;
 		};
 	};
+
+	i2c-gpio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		compatible = "i2c-gpio";
+		gpios = <&qcom_pinmux 8 GPIO_ACTIVE_HIGH>, /* sda */
+			<&qcom_pinmux 9 GPIO_ACTIVE_HIGH>; /* scl */
+		i2c-gpio,delay-us = <5>;
+	};
 };
 
 
@@ -124,7 +134,7 @@
 
 	led_pins: led_pins {
 		mux {
-			pins = "gpio16", "gpio23", "gpio24", "gpio26",
+			pins = "gpio6", "gpio7", "gpio16", "gpio23", "gpio24", "gpio26",
 				   "gpio28", "gpio59";
 			function = "gpio";
 			drive-strength = <2>;
@@ -259,39 +269,6 @@
 };
 
 &soc {
-	nand@1ac00000 {
-		status = "okay";
-
-		pinctrl-0 = <&nand_pins>;
-		pinctrl-names = "default";
-
-		nand@0 {
-			compatible = "qcom,nandcs";
-
-			reg = <0>;
-
-			nand-ecc-strength = <4>;
-			nand-bus-width = <8>;
-			nand-ecc-step-size = <512>;
-
-			partitions {
-				compatible = "fixed-partitions";
-				#address-cells = <1>;
-				#size-cells = <1>;
-
-				rootfs1@0 {
-					label = "rootfs1";
-					reg = <0x0000000 0x4000000>;
-				};
-
-				rootfs2@4000000 {
-					label = "rootfs2";
-					reg = <0x4000000 0x4000000>;
-				};
-			};
-		};
-	};
-
 	mdio1: mdio {
 		compatible = "virtual,mdio-gpio";
 		#address-cells = <1>;
@@ -306,13 +283,49 @@
 
 		phy0: ethernet-phy@0 {
 			reg = <0>;
+			reset-gpios = <&qcom_pinmux 7 GPIO_ACTIVE_HIGH>;
 		};
 
 		phy1: ethernet-phy@1 {
 			reg = <1>;
+			reset-gpios = <&qcom_pinmux 6 GPIO_ACTIVE_HIGH>;
 		};
 	};
 };
+
+&nand_controller {
+	status = "okay";
+
+	pinctrl-0 = <&nand_pins>;
+	pinctrl-names = "default";
+
+	nand@0 {
+		compatible = "qcom,nandcs";
+
+		reg = <0>;
+
+		nand-ecc-strength = <4>;
+		nand-bus-width = <8>;
+		nand-ecc-step-size = <512>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			rootfs1@0 {
+				label = "rootfs1";
+				reg = <0x0000000 0x4000000>;
+			};
+
+			rootfs2@4000000 {
+				label = "rootfs2";
+				reg = <0x4000000 0x4000000>;
+			};
+		};
+	};
+};
+
 
 &gmac2 {
 	status = "okay";
@@ -328,7 +341,7 @@
 	status = "okay";
 
 	qcom,id = <3>;
-	mdiobus = <&mdio1>;
+	mdiobus = <&mdio0>;
 
 	phy-mode = "sgmii";
 	phy-handle = <&phy0>;

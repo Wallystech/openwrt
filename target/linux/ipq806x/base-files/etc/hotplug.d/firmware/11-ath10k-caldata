@@ -16,9 +16,6 @@ case "$FIRMWARE" in
 		caldata_extract "ART" 0x1000 0x2f20
 		ath10k_patch_mac $(mtd_get_mac_binary ART 0x1e)
 		;;
-	edgecore,ecw5410)
-		caldata_extract "0:ART" 0x1000 0x2f20
-		;;
 	linksys,ea7500-v1 |\
 	linksys,ea8500)
 		caldata_extract "art" 0x1000 0x2f20
@@ -58,6 +55,9 @@ case "$FIRMWARE" in
 	buffalo,wxr-2533dhp)
 		caldata_extract "ART" 0x5000 0x2f20
 		ath10k_patch_mac $(mtd_get_mac_binary ART 0x18)
+		;;
+	edgecore,ecw5410)
+		caldata_extract "0:ART" 0x1000 0x2f20
 		;;
 	linksys,ea7500-v1 |\
 	linksys,ea8500)
