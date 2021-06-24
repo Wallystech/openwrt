@@ -2209,6 +2209,17 @@ define Device/yuncore_a770
 endef
 TARGET_DEVICES += yuncore_a770
 
+define Device/indio_um-305ac
+  SOC := qca9531
+  DEVICE_VENDOR := Indio Network
+  DEVICE_MODEL := UM-305AC
+  DEVICE_PACKAGES := kmod-ath10k ath10k-firmware-qca9887
+  IMAGE_SIZE := 16000k
+  IMAGES += tftp.bin
+  IMAGE/tftp.bin := $$(IMAGE/sysupgrade.bin) | yuncore-tftp-header-16m
+endef
+TARGET_DEVICES += indio_um-305ac
+
 define Device/yuncore_a782
   SOC := qca9563
   DEVICE_VENDOR := YunCore
