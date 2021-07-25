@@ -12,9 +12,9 @@ PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/procd.git
-PKG_SOURCE_DATE:=2021-02-23
-PKG_SOURCE_VERSION:=37eed131e9967a35f47bacb3437a9d3c8a57b3f4
-PKG_MIRROR_HASH:=2b0131ff9055ccf987cbeb5f36c2c2585dc780999df6be312fbbbcd61ce676d4
+PKG_SOURCE_DATE:=2021-08-15
+PKG_SOURCE_VERSION:=104b49d6ab25a8cf067e6d8d1f2da7defb9876d4
+PKG_MIRROR_HASH:=d13b566a14e84f6babe8b7d3dfb88e34c3dff0e97d7770d6fe71174685bca628
 CMAKE_INSTALL:=1
 
 PKG_LICENSE:=GPL-2.0
@@ -32,7 +32,7 @@ include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 ifeq ($(DUMP),)
-  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | mkhash md5)
+  STAMP_CONFIGURED:=$(strip $(STAMP_CONFIGURED))_$(shell echo $(CONFIG_TARGET_INIT_PATH) | $(MKHASH) md5)
 endif
 
 CMAKE_OPTIONS += -DEARLY_PATH="$(TARGET_INIT_PATH)"
@@ -82,7 +82,7 @@ endef
 define Package/procd-seccomp
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=@(arm||armeb||mips||mipsel||i386||powerpc||x86_64) @!TARGET_uml \
+  DEPENDS:=@(aarch64||arm||armeb||mips||mipsel||i386||powerpc||x86_64) @!TARGET_uml \
 	  @KERNEL_SECCOMP +libubox +libblobmsg-json
   TITLE:=OpenWrt process seccomp helper + utrace
 endef
@@ -90,7 +90,7 @@ endef
 define Package/uxc
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+procd-ujail +libubus +libubox +libblobmsg-json
+  DEPENDS:=+procd-ujail +libubus +libubox +libblobmsg-json +blockd +rpcd
   TITLE:=OpenWrt container management
   MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
 endef
