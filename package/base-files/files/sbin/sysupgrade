@@ -357,6 +357,8 @@ if [ $TEST -eq 1 ]; then
 	exit 0
 fi
 
+fw_printenv > /dev/null
+
 install_bin /sbin/upgraded
 v "Commencing upgrade. Closing all shell sessions."
 
