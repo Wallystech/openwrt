@@ -9,6 +9,7 @@ boot() {
 	asrock,g10)
 		asrock_bootconfig_mangle "bootcheck" && reboot
 		;;
+	edgecore,ssw2ac2600|\
 	edgecore,ecw5410)
 		fw_setenv bootcount 0
 		;;

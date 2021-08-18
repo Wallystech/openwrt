@@ -157,6 +157,20 @@ define Device/edgecore_ecw5410
 endef
 TARGET_DEVICES += edgecore_ecw5410
 
+define Device/edgecore_ssw2ac2600
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Edgecore
+	DEVICE_MODEL := SSW2AC2600
+	SOC := qcom-ipq8068
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_DTS := qcom-ipq8068-ssw2ac2600
+	DEVICE_DTS_CONFIG := config@v2.0-ap160
+	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-edgecore_ssw2ac2600
+endef
+TARGET_DEVICES += edgecore_ssw2ac2600
+
 define Device/linksys_ea7500-v1
 	$(call Device/LegacyImage)
 	DEVICE_VENDOR := Linksys

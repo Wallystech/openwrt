@@ -33,6 +33,7 @@ ALLWIFIBOARDS:= \
 	devolo_magic-2-wifi-next \
 	dlink_dap2610 \
 	edgecore_ecw5410 \
+	edgecore_ssw2ac2600 \
 	edgecore_oap100 \
 	engenius_eap2200 \
 	engenius_emd1 \
@@ -122,6 +123,7 @@ $(eval $(call generate-ipq-wifi-package,cellc_rtl30vw, Cell C RTL30VW))
 $(eval $(call generate-ipq-wifi-package,devolo_magic-2-wifi-next,devolo Magic 2 WiFi next))
 $(eval $(call generate-ipq-wifi-package,dlink_dap2610,D-Link DAP-2610))
 $(eval $(call generate-ipq-wifi-package,edgecore_ecw5410,Edgecore ECW5410))
+$(eval $(call generate-ipq-wifi-package,edgecore_ssw2ac2600,Edgecore SSW2AC2600))
 $(eval $(call generate-ipq-wifi-package,edgecore_oap100,Edgecore OAP100))
 $(eval $(call generate-ipq-wifi-package,engenius_eap2200,EnGenius EAP2200))
 $(eval $(call generate-ipq-wifi-package,engenius_emd1,EnGenius EMD1))

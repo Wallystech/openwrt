@@ -17,6 +17,7 @@ compex,wpq864)
 	ucidef_set_led_usbport "usb" "USB" "green:usb" "usb1-port1" "usb2-port1"
 	ucidef_set_led_usbport "pcie-usb" "PCIe USB" "green:usb-pcie" "usb3-port1"
 	;;
+edgecore,ssw2ac2600 |\
 edgecore,ecw5410)
 	ucidef_set_led_wlan "wlan2g" "WLAN2G" "green:wlan2g" "phy1tpt"
 	ucidef_set_led_wlan "wlan5g" "WLAN5G" "green:wlan5g" "phy0tpt"

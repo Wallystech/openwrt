@@ -31,6 +31,7 @@ ubootenv_mtdinfo () {
 }
 
 case "$board" in
+edgecore,ssw2ac2600 |\
 edgecore,ecw5410)
 	ubootenv_add_uci_config "/dev/mtd11" "0x0" "0x10000" "0x10000"
 	;;
