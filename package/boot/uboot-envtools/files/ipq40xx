@@ -64,6 +64,10 @@ tp-link,ec420-g1 |\
 zyxel,nbg6617)
 	ubootenv_add_uci_config "/dev/mtd6" "0x0" "0x10000" "0x10000"
 	;;
+hfcl,ion4)
+	env=$(ubootenv_mtdinfo)
+	ubootenv_add_uci_config $env
+	;;
 esac
 
 config_load ubootenv

@@ -74,6 +74,7 @@ platform_do_upgrade() {
 	mobipromo,cm520-79f |\
 	qxwlan,e2600ac-c2 |\
 	wallys,dr40x9 |\
+	hfcl,ion4 |\
 	tp-link,ec420-g1)
 		nand_do_upgrade "$1"
 		;;

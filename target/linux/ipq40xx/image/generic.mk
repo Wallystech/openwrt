@@ -857,3 +857,21 @@ define Device/tp-link_ec420_g1
 	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-tp-link_ec420-g1 uboot-envtools
 endef
 TARGET_DEVICES += tp-link_ec420_g1
+
+define Device/hfcl_ion4
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := HFCL
+	DEVICE_MODEL := ION4
+	SOC := qcom-ipq4019
+	DEVICE_DTS := qcom-ipq4019-hfcl-ion4
+	KERNEL_INSTALL := 1
+	KERNEL_SIZE := 4048k
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	BOARD_NAME := hfcl-ion4
+	IMAGES := nand-sysupgrade.bin
+	IMAGE/nand-sysupgrade.bin := sysupgrade-tar | append-metadata
+	DEVICE_PACKAGES := uboot-envtools
+endef
+TARGET_DEVICES += hfcl_ion4

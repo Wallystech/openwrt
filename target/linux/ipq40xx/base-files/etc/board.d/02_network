@@ -34,6 +34,7 @@ ipq40xx_setup_interfaces()
 	netgear,ex6100v2|\
 	netgear,ex6150v2|\
 	tp-link,ec420-g1|\
+	hfcl,ion4|\
 	zyxel,wre6606)
 		ucidef_set_interface_wan "eth0"
 		;;

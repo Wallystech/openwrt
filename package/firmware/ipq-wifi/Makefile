@@ -52,7 +52,8 @@ ALLWIFIBOARDS:= \
 	qxwlan_e2600ac \
 	cig_wf610d \
 	wallys_dr40x9 \
-	tp-link_ec420-g1
+	tp-link_ec420-g1 \
+	hfcl_ion4
 
 ALLWIFIPACKAGES:=$(foreach BOARD,$(ALLWIFIBOARDS),ipq-wifi-$(BOARD))
 
@@ -141,5 +142,6 @@ $(eval $(call generate-ipq-wifi-package,qxwlan_e2600ac,Qxwlan E2600AC))
 $(eval $(call generate-ipq-wifi-package,cig_wf610d,CIG WF_610D))
 $(eval $(call generate-ipq-wifi-package,tp-link_ec420-g1,tp-link EC420-G1))
 $(eval $(call generate-ipq-wifi-package,wallys_dr40x9,Wallys DR40X9))
+$(eval $(call generate-ipq-wifi-package,hfcl_ion4,HFCL ION4))
 
 $(foreach PACKAGE,$(ALLWIFIPACKAGES),$(eval $(call BuildPackage,$(PACKAGE))))

@@ -78,6 +78,10 @@ zyxel,wre6606)
 	ucidef_set_led_wlan "wlan2g" "WLAN2G" "green:wlan2g" "phy0tpt"
 	ucidef_set_led_wlan "wlan5g" "WLAN5G" "green:wlan5g" "phy1tpt"
 	;;
+hfcl,ion4)
+	ucidef_set_led_wlan "wlan2g" "WLAN2G" "yellow:wlan2g" "phy0tpt"
+	ucidef_set_led_wlan "wlan5g" "WLAN5G" "red:wlan5g" "phy1tpt"
+	;;
 esac
 
 board_config_flush
