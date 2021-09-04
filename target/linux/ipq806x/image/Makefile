@@ -26,8 +26,6 @@ endef
 define Device/Default
 	PROFILES := Default
 	KERNEL_DEPENDS = $$(wildcard $(DTS_DIR)/$$(DEVICE_DTS).dts)
-	KERNEL_INITRAMFS_PREFIX := $$(IMG_PREFIX)-$(1)-initramfs
-	KERNEL_PREFIX := $$(IMAGE_PREFIX)
 	KERNEL_LOADADDR = 0x42208000
 	DEVICE_DTS = $$(SOC)-$(lastword $(subst _, ,$(1)))
 	DEVICE_DTS_CONFIG := config@1
@@ -92,6 +90,19 @@ define Device/ZyXELImage
 	IMAGE/sysupgrade.bin/squashfs := append-rootfs | pad-to $$$$(BLOCKSIZE) | sysupgrade-tar rootfs=$$$$@ | append-metadata
 endef
 
+define Device/askey_rt4230w-rev6
+	$(call Device/LegacyImage)
+	DEVICE_VENDOR := Askey
+	DEVICE_MODEL := RT4230W
+	DEVICE_VARIANT := REV6
+	SOC := qcom-ipq8065
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct
+	KERNEL_IN_UBI := 1
+endef
+TARGET_DEVICES += askey_rt4230w-rev6
+
 define Device/asrock_g10
 	$(call Device/FitImage)
 	$(call Device/UbiFit)
@@ -142,7 +153,7 @@ define Device/edgecore_ecw5410
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
 	DEVICE_DTS_CONFIG := config@v2.0-ap160
-	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-edgecore_ecw5410 kmod-i2c-gpio
+	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-edgecore_ecw5410
 endef
 TARGET_DEVICES += edgecore_ecw5410
 
@@ -390,7 +401,7 @@ define Device/ubnt_unifi-ac-hd
 	BLOCKSIZE := 64k
 	IMAGE_SIZE := 14784k
 	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct
-	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-rootfs | pad-rootfs | append-metadata | check-size
+	IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-rootfs | pad-rootfs | check-size | append-metadata
 endef
 TARGET_DEVICES += ubnt_unifi-ac-hd
 
