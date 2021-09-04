@@ -34,11 +34,11 @@ extern struct rtl83xx_soc_info soc_info;
  * the memory used for the ring buffer.
  */
 #define MAX_RXRINGS	32
-#define MAX_RXLEN	100
-#define MAX_ENTRIES	(200 * 8)
+#define MAX_RXLEN	300
+#define MAX_ENTRIES	(300 * 8)
 #define TXRINGS		2
 // BUG: TXRINGLEN can be 160
-#define TXRINGLEN	16
+#define TXRINGLEN	160
 #define NOTIFY_EVENTS	10
 #define NOTIFY_BLOCKS	10
 #define TX_EN		0x8
@@ -47,12 +47,18 @@ extern struct rtl83xx_soc_info soc_info;
 #define RX_EN_93XX	0x10
 #define TX_DO		0x2
 #define WRAP		0x2
+#define MAX_PORTS	57
+#define MAX_SMI_BUSSES	4
 
 #define RING_BUFFER	1600
 
 #define RTL838X_STORM_CTRL_PORT_BC_EXCEED	(0x470C)
 #define RTL838X_STORM_CTRL_PORT_MC_EXCEED	(0x4710)
 #define RTL838X_STORM_CTRL_PORT_UC_EXCEED	(0x4714)
+
+#define RTL839X_STORM_CTRL_PORT_BC_EXCEED	(0x180C)
+#define RTL839X_STORM_CTRL_PORT_MC_EXCEED	(0x1814)
+#define RTL839X_STORM_CTRL_PORT_UC_EXCEED	(0x181C)
 #define RTL838X_ATK_PRVNT_STS			(0x5B1C)
 
 struct p_hdr {
@@ -95,7 +101,7 @@ struct notify_b {
 	u32			reserved2[8];
 };
 
-void rtl838x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
+static void rtl838x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 {
 	prio &= 0x7;
 
@@ -112,7 +118,7 @@ void rtl838x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 	}
 }
 
-void rtl839x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
+static void rtl839x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 {
 	prio &= 0x7;
 
@@ -120,6 +126,7 @@ void rtl839x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 		// cpu_tag[0] is reserved on the RTL83XX SoCs
 		h->cpu_tag[1] = 0x0100;
 		h->cpu_tag[2] = h->cpu_tag[3] = h->cpu_tag[4] = h->cpu_tag[5] = 0;
+		// h->cpu_tag[1] |= BIT(1) | BIT(0); // Bypass filter 1/2
 		if (dest_port >= 32) {
 			dest_port -= 32;
 			h->cpu_tag[2] = BIT(dest_port) >> 16;
@@ -128,35 +135,49 @@ void rtl839x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 			h->cpu_tag[4] = BIT(dest_port) >> 16;
 			h->cpu_tag[5] = BIT(dest_port) & 0xffff;
 		}
-		h->cpu_tag[6] |= BIT(21); // Enable destination port mask use
+		h->cpu_tag[2] |= BIT(5); // Enable destination port mask use
 		// Set internal priority and AS_PRIO
 		if (prio >= 0)
 			h->cpu_tag[1] |= prio | BIT(3);
 	}
 }
 
-void rtl930x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
+static void rtl930x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 {
 	h->cpu_tag[0] = 0x8000;
-	h->cpu_tag[1] = 0;  // TODO: Fill port and prio
-	h->cpu_tag[2] = 0;
+	h->cpu_tag[1] = h->cpu_tag[2] = 0;
+	if (prio >= 0)
+		h->cpu_tag[2] = BIT(13) | prio << 8; // Enable and set  Priority Queue
 	h->cpu_tag[3] = 0;
 	h->cpu_tag[4] = 0;
 	h->cpu_tag[5] = 0;
-	h->cpu_tag[6] = 0;
-	h->cpu_tag[7] = 0xffff;
+	h->cpu_tag[6] = BIT(dest_port) >> 16;
+	h->cpu_tag[7] = BIT(dest_port) & 0xffff;
 }
 
-void rtl931x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
+static void rtl931x_create_tx_header(struct p_hdr *h, int dest_port, int prio)
 {
 	h->cpu_tag[0] = 0x8000;
-	h->cpu_tag[1] = 0;  // TODO: Fill port and prio
-	h->cpu_tag[2] = 0;
+	h->cpu_tag[1] = h->cpu_tag[2] = 0;
+	if (prio >= 0)
+		h->cpu_tag[2] = BIT(13) | prio << 8; // Enable and set  Priority Queue
 	h->cpu_tag[3] = 0;
-	h->cpu_tag[4] = 0;
-	h->cpu_tag[5] = 0;
-	h->cpu_tag[6] = 0;
-	h->cpu_tag[7] = 0xffff;
+	h->cpu_tag[4] = h->cpu_tag[5] = h->cpu_tag[6] = h->cpu_tag[7] = 0;
+	if (dest_port >= 32) {
+		dest_port -= 32;
+		h->cpu_tag[4] = BIT(dest_port) >> 16;
+		h->cpu_tag[5] = BIT(dest_port) & 0xffff;
+	} else {
+		h->cpu_tag[6] = BIT(dest_port) >> 16;
+		h->cpu_tag[7] = BIT(dest_port) & 0xffff;
+	}
+}
+
+static void rtl93xx_header_vlan_set(struct p_hdr *h, int vlan)
+{
+	h->cpu_tag[2] |= BIT(4); // Enable VLAN forwarding offload
+	h->cpu_tag[2] |= (vlan >> 8) & 0xf;
+	h->cpu_tag[3] |= (vlan & 0xff) << 8;
 }
 
 struct rtl838x_rx_q {
@@ -181,6 +202,9 @@ struct rtl838x_eth_priv {
 	u32 lastEvent;
 	u16 rxrings;
 	u16 rxringlen;
+	u8 smi_bus[MAX_PORTS];
+	u8 smi_addr[MAX_PORTS];
+	bool smi_bus_isc45[MAX_SMI_BUSSES];
 };
 
 extern int rtl838x_phy_init(struct rtl838x_eth_priv *priv);
@@ -234,35 +258,54 @@ struct dsa_tag {
 	u16	port;
 	u8	l2_offloaded;
 	u8	prio;
+	bool	crc_error;
 };
 
 bool rtl838x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
 {
 	t->reason = h->cpu_tag[3] & 0xf;
-	if (t->reason != 15)
-	pr_debug("Reason: %d\n", t->reason);
 	t->queue = (h->cpu_tag[0] & 0xe0) >> 5;
+	t->port = h->cpu_tag[1] & 0x1f;
+	t->crc_error = t->reason == 13;
+
+	pr_debug("Reason: %d\n", t->reason);
 	if (t->reason != 4) // NIC_RX_REASON_SPECIAL_TRAP
 		t->l2_offloaded = 1;
 	else
 		t->l2_offloaded = 0;
-	t->port = h->cpu_tag[1] & 0x1f;
 
 	return t->l2_offloaded;
 }
 
 bool rtl839x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
 {
-	t->reason = h->cpu_tag[4] & 0x1f;
-	if (t->reason != 31)
-	pr_debug("Reason: %d\n", t->reason);
-		t->queue = (h->cpu_tag[3] & 0xe000) >> 13;
-	if ((t->reason != 7) && (t->reason != 8)) // NIC_RX_REASON_RMA_USR
-		t->l2_offloaded = 1;
-	else
-		t->l2_offloaded = 0;
-	
+	t->reason = h->cpu_tag[5] & 0x1f;
+	t->queue = (h->cpu_tag[3] & 0xe000) >> 13;
 	t->port = h->cpu_tag[1] & 0x3f;
+	t->crc_error = h->cpu_tag[3] & BIT(2);
+
+	pr_debug("Reason: %d\n", t->reason);
+	if ((t->reason >= 7 && t->reason <= 13) || // NIC_RX_REASON_RMA
+	    (t->reason >= 23 && t->reason <= 25))  // NIC_RX_REASON_SPECIAL_TRAP
+		t->l2_offloaded = 0;
+	else
+		t->l2_offloaded = 1;
+
+	return t->l2_offloaded;
+}
+
+bool rtl930x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
+{
+	t->reason = h->cpu_tag[7] & 0x3f;
+	t->queue =  (h->cpu_tag[2] >> 11) & 0x1f;
+	t->port = (h->cpu_tag[0] >> 8) & 0x1f;
+	t->crc_error = h->cpu_tag[1] & BIT(6);
+
+	pr_debug("Reason %d, port %d, queue %d\n", t->reason, t->port, t->queue);
+	if (t->reason >= 19 && t->reason <= 27)
+		t->l2_offloaded = 0;
+	else
+		t->l2_offloaded = 1;
 
 	return t->l2_offloaded;
 }
@@ -270,21 +313,16 @@ bool rtl839x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
 bool rtl931x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
 {
 	t->reason = h->cpu_tag[7] & 0x3f;
-	pr_debug("Reason %d\n", t->reason);
 	t->queue =  (h->cpu_tag[2] >> 11) & 0x1f;
+	t->port = (h->cpu_tag[0] >> 8) & 0x3f;
+	t->crc_error = h->cpu_tag[1] & BIT(6);
+
+	pr_debug("Reason %d, port %d, queue %d\n", t->reason, t->port, t->queue);
 	if (t->reason >= 19 && t->reason <= 27)
 		t->l2_offloaded = 0;
 	else
 		t->l2_offloaded = 1;
-	t->port = (h->cpu_tag[0] >> 8) & 0x3f;
 
-	return t->l2_offloaded;
-}
-
-bool rtl930x_decode_tag(struct p_hdr *h, struct dsa_tag *t)
-{
-	rtl931x_decode_tag(h, t);
-	t->port &= 0x1f;
 	return t->l2_offloaded;
 }
 
@@ -398,21 +436,48 @@ static irqreturn_t rtl83xx_net_irq(int irq, void *dev_id)
 	bool triggered = false;
 	u32 atk = sw_r32(RTL838X_ATK_PRVNT_STS);
 	int i;
-	u32 storm_uc = sw_r32(RTL838X_STORM_CTRL_PORT_UC_EXCEED);
-	u32 storm_mc = sw_r32(RTL838X_STORM_CTRL_PORT_MC_EXCEED);
-	u32 storm_bc = sw_r32(RTL838X_STORM_CTRL_PORT_BC_EXCEED);
-
-	pr_debug("IRQ: %08x\n", status);
-	if (storm_uc || storm_mc || storm_bc) {
-		pr_warn("Storm control UC: %08x, MC: %08x, BC: %08x\n",
-			storm_uc, storm_mc, storm_bc);
-
-		sw_w32(storm_uc, RTL838X_STORM_CTRL_PORT_UC_EXCEED);
-		sw_w32(storm_mc, RTL838X_STORM_CTRL_PORT_MC_EXCEED);
-		sw_w32(storm_bc, RTL838X_STORM_CTRL_PORT_BC_EXCEED);
-
-		triggered = true;
+#if 0
+	/*
+	 * this code is wrong in many points. first. the register has a per port offset. so this code here checks only the content of port 0
+	 * second, the registers are different for each chipset. remove this code for now since it does not make any sense at all 
+	 */
+	u32 storm_uc = 0;
+	u32 storm_mc = 0;
+	u32 storm_bc = 0;
+	if (priv->family_id == RTL8390_FAMILY_ID) {
+		storm_uc = sw_r32(RTL839X_STORM_CTRL_PORT_UC_EXCEED);
+		storm_mc = sw_r32(RTL839X_STORM_CTRL_PORT_MC_EXCEED);
+		storm_bc = sw_r32(RTL839X_STORM_CTRL_PORT_BC_EXCEED);
+		pr_debug("IRQ: %08x\n", status);
+		if (storm_uc || storm_mc || storm_bc) {
+			pr_warn("Storm control UC: %08x, MC: %08x, BC: %08x\n",
+				storm_uc, storm_mc, storm_bc);
+	
+			sw_w32(storm_uc, RTL839X_STORM_CTRL_PORT_UC_EXCEED);
+			sw_w32(storm_mc, RTL839X_STORM_CTRL_PORT_MC_EXCEED);
+			sw_w32(storm_bc, RTL839X_STORM_CTRL_PORT_BC_EXCEED);
+	
+			triggered = true;
+		}
 	}
+	if (priv->family_id == RTL8380_FAMILY_ID) {
+		storm_uc = sw_r32(RTL838X_STORM_CTRL_PORT_UC_EXCEED);
+		storm_mc = sw_r32(RTL838X_STORM_CTRL_PORT_MC_EXCEED);
+		storm_bc = sw_r32(RTL838X_STORM_CTRL_PORT_BC_EXCEED);
+		pr_debug("IRQ: %08x\n", status);
+		if (storm_uc || storm_mc || storm_bc) {
+			pr_warn("Storm control UC: %08x, MC: %08x, BC: %08x\n",
+				storm_uc, storm_mc, storm_bc);
+	
+			sw_w32(storm_uc, RTL838X_STORM_CTRL_PORT_UC_EXCEED);
+			sw_w32(storm_mc, RTL838X_STORM_CTRL_PORT_MC_EXCEED);
+			sw_w32(storm_bc, RTL838X_STORM_CTRL_PORT_BC_EXCEED);
+	
+			triggered = true;
+		}
+	}
+#endif
+
 
 	if (atk) {
 		pr_debug("Attack prevention triggered: %08x\n", atk);
@@ -441,7 +506,7 @@ static irqreturn_t rtl83xx_net_irq(int irq, void *dev_id)
 
 	/* RX buffer overrun */
 	if (status & 0x000ff) {
-		pr_info("RX buffer overrun: status %x, mask: %x\n",
+		pr_debug("RX buffer overrun: status %x, mask: %x\n",
 			 status, sw_r32(priv->r->dma_if_intr_msk));
 		sw_w32(status, priv->r->dma_if_intr_sts);
 		rtl838x_rb_cleanup(priv, status & 0xff);
@@ -731,8 +796,9 @@ static void rtl838x_hw_en_rxtx(struct rtl838x_eth_priv *priv)
 	 * | MEDIA_SEL
 	 */
 	sw_w32(0x6192F, priv->r->mac_force_mode_ctrl + priv->cpu_port * 4);
-	/* allow CRC errors on CPU-port */
-	sw_w32_mask(0, 0x8, priv->r->mac_port_ctrl(priv->cpu_port));
+
+	/* Enable CRC checks on CPU-port */
+	sw_w32_mask(0, BIT(3), priv->r->mac_port_ctrl(priv->cpu_port));
 }
 
 static void rtl839x_hw_en_rxtx(struct rtl838x_eth_priv *priv)
@@ -746,8 +812,8 @@ static void rtl839x_hw_en_rxtx(struct rtl838x_eth_priv *priv)
 	/* Enable DMA */
 	sw_w32_mask(0, RX_EN | TX_EN, priv->r->dma_if_ctrl);
 
-	/* Restart TX/RX to CPU port */
-	sw_w32_mask(0x0, 0x3, priv->r->mac_port_ctrl(priv->cpu_port));
+	/* Restart TX/RX to CPU port, enable CRC checking */
+	sw_w32_mask(0x0, 0x3 | BIT(3), priv->r->mac_port_ctrl(priv->cpu_port));
 
 	/* CPU port joins Lookup Miss Flooding Portmask */
 	// TODO: The code below should also work for the RTL838x
@@ -784,8 +850,8 @@ static void rtl93xx_hw_en_rxtx(struct rtl838x_eth_priv *priv)
 	/* Enable DMA */
 	sw_w32_mask(0, RX_EN_93XX | TX_EN_93XX, priv->r->dma_if_ctrl);
 
-	/* Restart TX/RX to CPU port */
-	sw_w32_mask(0x0, 0x3, priv->r->mac_port_ctrl(priv->cpu_port));
+	/* Restart TX/RX to CPU port, enable CRC checking */
+	sw_w32_mask(0x0, 0x3 | BIT(4), priv->r->mac_port_ctrl(priv->cpu_port));
 
 	sw_w32_mask(0, BIT(priv->cpu_port), RTL930X_L2_UNKN_UC_FLD_PMSK);
 	sw_w32(0x217, priv->r->mac_force_mode_ctrl + priv->cpu_port * 4);
@@ -883,28 +949,30 @@ static int rtl838x_eth_open(struct net_device *ndev)
 	switch (priv->family_id) {
 	case RTL8380_FAMILY_ID:
 		rtl838x_hw_en_rxtx(priv);
-		/* Trap IGMP traffic to CPU-Port */
+		/* Trap IGMP/MLD traffic to CPU-Port */
 		sw_w32(0x3, RTL838X_SPCL_TRAP_IGMP_CTRL);
 		/* Flush learned FDB entries on link down of a port */
 		sw_w32_mask(0, BIT(7), RTL838X_L2_CTRL_0);
 		break;
+
 	case RTL8390_FAMILY_ID:
 		rtl839x_hw_en_rxtx(priv);
+		// Trap MLD and IGMP messages to CPU_PORT
 		sw_w32(0x3, RTL839X_SPCL_TRAP_IGMP_CTRL);
 		/* Flush learned FDB entries on link down of a port */
 		sw_w32_mask(0, BIT(7), RTL839X_L2_CTRL_0);
 		break;
+
 	case RTL9300_FAMILY_ID:
 		rtl93xx_hw_en_rxtx(priv);
 		/* Flush learned FDB entries on link down of a port */
 		sw_w32_mask(0, BIT(7), RTL930X_L2_CTRL);
-		sw_w32_mask(BIT(28), 0, RTL930X_L2_PORT_SABLK_CTRL);
-		sw_w32_mask(BIT(28), 0, RTL930X_L2_PORT_DABLK_CTRL);
+		// Trap MLD and IGMP messages to CPU_PORT
+		sw_w32((0x2 << 3) | 0x2,  RTL930X_VLAN_APP_PKT_CTRL);
 		break;
 
 	case RTL9310_FAMILY_ID:
 		rtl93xx_hw_en_rxtx(priv);
-//		TODO: Add trapping of IGMP frames to CPU-port
 		break;
 	}
 
@@ -1111,19 +1179,22 @@ static int rtl838x_eth_tx(struct sk_buff *skb, struct net_device *dev)
 	spin_lock_irqsave(&priv->lock, flags);
 	len = skb->len;
 
+	pr_debug("SEND: %08x %08x %08x %08x %08x present %d, vp %04x vt %04x\n",
+		*((u32 *)skb->data), *((u32 *)skb->data + 1), *((u32 *)skb->data + 2),
+		*((u32 *)skb->data + 3), *((u32 *)skb->data + 4),
+		skb->vlan_present, skb->vlan_proto, skb->vlan_tci
+	);
 	/* Check for DSA tagging at the end of the buffer */
 	if (netdev_uses_dsa(dev) && skb->data[len-4] == 0x80 && skb->data[len-3] > 0
-			&& skb->data[len-3] < 28 &&  skb->data[len-2] == 0x10
+			&& skb->data[len-3] < priv->cpu_port &&  skb->data[len-2] == 0x10
 			&&  skb->data[len-1] == 0x00) {
-		/* Reuse tag space for CRC */
+		/* Reuse tag space for CRC if possible */
 		dest_port = skb->data[len-3];
+		skb->data[len-4] = skb->data[len-3] = skb->data[len-2] = skb->data[len-1] = 0x00;
 		len -= 4;
 	}
-	if (len < ETH_ZLEN)
-		len = ETH_ZLEN;
 
-	/* ASIC expects that packet includes CRC, so we extend by 4 bytes */
-	len += 4;
+	len += 4; // Add space for CRC
 
 	if (skb_padto(skb, len)) {
 		ret = NETDEV_TX_OK;
@@ -1137,6 +1208,11 @@ static int rtl838x_eth_tx(struct sk_buff *skb, struct net_device *dev)
 		h = &ring->tx_header[q][ring->c_tx[q]];
 		h->size = len;
 		h->len = len;
+		// On RTL8380 SoCs, the packet length being sent needs adjustment
+		if (priv->family_id == RTL8380_FAMILY_ID) {
+			if (len < ETH_ZLEN - 4)
+				h->len -= 4;
+		}
 
 		priv->r->create_tx_header(h, dest_port, skb->priority >> 1);
 
@@ -1264,6 +1340,7 @@ static int rtl838x_hw_receive(struct net_device *dev, int r, int budget)
 			/* Make sure data is visible */
 			mb();
 			memcpy(skb->data, (u8 *)KSEG1ADDR(data), len);
+
 			/* Overwrite CRC with cpu_tag */
 			if (dsa) {
 				priv->r->decode_tag(h, &tag);
@@ -1280,6 +1357,12 @@ static int rtl838x_hw_receive(struct net_device *dev, int r, int budget)
 					 tag.queue, len, tag.reason, tag.port);
 
 			skb->protocol = eth_type_trans(skb, dev);
+			if (dev->features & NETIF_F_RXCSUM) {
+				if (tag.crc_error)
+					skb_checksum_none_assert(skb);
+				else
+					skb->ip_summed = CHECKSUM_UNNECESSARY;
+			}
 			dev->stats.rx_packets++;
 			dev->stats.rx_bytes += len;
 
@@ -1596,7 +1679,7 @@ static int rtl930x_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 
 	// TODO: These are hard-coded for the 2 Fibre Ports of the XGS1210
 	if (mii_id >= 26 && mii_id <= 27)
-		return rtl930x_read_sds_phy(mii_id - 18, 0, regnum);
+		return rtl930x_read_sds_phy(mii_id - 23, 0, regnum);
 
 	if (regnum & MII_ADDR_C45) {
 		regnum &= ~MII_ADDR_C45;
@@ -1719,52 +1802,54 @@ static int rtl930x_mdio_reset(struct mii_bus *bus)
 {
 	int i;
 	int pos;
+	struct rtl838x_eth_priv *priv = bus->priv;
+	u32 c45_mask = 0;
+	u32 poll_sel[2];
+	u32 poll_ctrl = 0;
 
-	pr_info("RTL930X_SMI_PORT0_15_POLLING_SEL %08x 16-27: %08x\n",
-		sw_r32(RTL930X_SMI_PORT0_15_POLLING_SEL),
-		sw_r32(RTL930X_SMI_PORT16_27_POLLING_SEL));
-
-	pr_info("%s: Enable SMI polling on SMI bus 0, SMI1, SMI2, disable on SMI3\n", __func__);
-	sw_w32_mask(BIT(20) | BIT(21) | BIT(22), BIT(23), RTL930X_SMI_GLB_CTRL);
-
-	pr_info("RTL9300 Powering on SerDes ports\n");
-	rtl9300_sds_power(24, 1);
-	rtl9300_sds_power(25, 1);
-	rtl9300_sds_power(26, 1);
-	rtl9300_sds_power(27, 1);
-	mdelay(200);
-
-	// RTL930X_SMI_PORT0_15_POLLING_SEL 55550000 16-27: 00f9aaaa
-	// i.e SMI=0 for all ports
-	for (i = 0; i < 5; i++)
-		pr_info("port phy: %08x\n", sw_r32(RTL930X_SMI_PORT0_5_ADDR + i *4));
-
-	// 1-to-1 mapping of port to phy-address
-	for (i = 0; i < 24; i++) {
+	// Mapping of port to phy-addresses on an SMI bus
+	poll_sel[0] = poll_sel[1] = 0;
+	for (i = 0; i < 28; i++) {
 		pos = (i % 6) * 5;
-		sw_w32_mask(0x1f << pos, i << pos, RTL930X_SMI_PORT0_5_ADDR + (i / 6) * 4);
+		sw_w32_mask(0x1f << pos, priv->smi_addr[i] << pos,
+			    RTL930X_SMI_PORT0_5_ADDR + (i / 6) * 4);
+
+		pos = (i * 2) % 32;
+		poll_sel[i / 16] |= priv->smi_bus[i] << pos;
+		poll_ctrl |= BIT(20 + priv->smi_bus[i]);
 	}
 
-	// ports 24 and 25 have PHY addresses 8 and 9, ports 26/27 PHY 26/27
-	sw_w32(8 | 9 << 5 | 26 << 10 | 27 << 15, RTL930X_SMI_PORT0_5_ADDR + 4 * 4);
+	// Configure which SMI bus is behind which port number
+	sw_w32(poll_sel[0], RTL930X_SMI_PORT0_15_POLLING_SEL);
+	sw_w32(poll_sel[1], RTL930X_SMI_PORT16_27_POLLING_SEL);
 
-	// Ports 24 and 25 live on SMI bus 1 and 2
-	sw_w32_mask(0x3 << 16, 0x1 << 16, RTL930X_SMI_PORT16_27_POLLING_SEL);
-	sw_w32_mask(0x3 << 18, 0x2 << 18, RTL930X_SMI_PORT16_27_POLLING_SEL);
+	// Enable polling on the respective SMI busses
+	sw_w32_mask(0, poll_ctrl, RTL930X_SMI_GLB_CTRL);
 
-	// SMI bus 1 and 2 speak Clause 45 TODO: Configure from .dts
-	sw_w32_mask(0, BIT(17) | BIT(18), RTL930X_SMI_GLB_CTRL);
+	// Configure which SMI busses are polled in c45 based on a c45 PHY being on that bus
+	for (i = 0; i < 4; i++)
+		if (priv->smi_bus_isc45[i])
+			c45_mask |= BIT(i + 16);
+
+	pr_info("c45_mask: %08x\n", c45_mask);
+	sw_w32_mask(0, c45_mask, RTL930X_SMI_GLB_CTRL);
 
 	// Ports 24 and 25 are 2.5 Gig, set this type (1)
 	sw_w32_mask(0x7 << 12, 1 << 12, RTL930X_SMI_MAC_TYPE_CTRL);
 	sw_w32_mask(0x7 << 15, 1 << 15, RTL930X_SMI_MAC_TYPE_CTRL);
+	// Ports 26 and 27 are 10 Gig SerDes, set this type (0)
+	sw_w32_mask(0x7 << 18, 0, RTL930X_SMI_MAC_TYPE_CTRL);
+	sw_w32_mask(0x7 << 21, 0, RTL930X_SMI_MAC_TYPE_CTRL);
+
+	// TODO: Set up RTL9300_SMI_10GPHY_POLLING_SEL_0_ADDR for Aquantia PHYs on 1250
 
 	return 0;
 }
 
 static int rtl838x_mdio_init(struct rtl838x_eth_priv *priv)
 {
-	struct device_node *mii_np;
+	struct device_node *mii_np, *dn;
+	u32 pn;
 	int ret;
 
 	pr_debug("%s called\n", __func__);
@@ -1817,6 +1902,28 @@ static int rtl838x_mdio_init(struct rtl838x_eth_priv *priv)
 	priv->mii_bus->priv = priv;
 	priv->mii_bus->parent = &priv->pdev->dev;
 
+	for_each_node_by_name(dn, "ethernet-phy") {
+		u32 smi_addr[2];
+
+		if (of_property_read_u32(dn, "reg", &pn))
+			continue;
+
+		if (of_property_read_u32_array(dn, "rtl9300,smi-address", &smi_addr[0], 2)) {
+			smi_addr[0] = 0;
+			smi_addr[1] = pn;
+		}
+
+		if (pn < MAX_PORTS) {
+			priv->smi_bus[pn] = smi_addr[0];
+			priv->smi_addr[pn] = smi_addr[1];
+		} else {
+			pr_err("%s: illegal port number %d\n", __func__, pn);
+		}
+
+		if (of_device_is_compatible(dn, "ethernet-phy-ieee802.3-c45"))
+			priv->smi_bus_isc45[smi_addr[0]] = true;
+	}
+
 	snprintf(priv->mii_bus->id, MII_BUS_ID_SIZE, "%pOFn", mii_np);
 	ret = of_mdiobus_register(priv->mii_bus, mii_np);
 
@@ -1837,6 +1944,40 @@ static int rtl838x_mdio_remove(struct rtl838x_eth_priv *priv)
 	return 0;
 }
 
+static netdev_features_t rtl838x_fix_features(struct net_device *dev,
+					  netdev_features_t features)
+{
+	return features;
+}
+
+static int rtl83xx_set_features(struct net_device *dev, netdev_features_t features)
+{
+	struct rtl838x_eth_priv *priv = netdev_priv(dev);
+
+	if ((features ^ dev->features) & NETIF_F_RXCSUM) {
+		if (!(features & NETIF_F_RXCSUM))
+			sw_w32_mask(BIT(3), 0, priv->r->mac_port_ctrl(priv->cpu_port));
+		else
+			sw_w32_mask(0, BIT(4), priv->r->mac_port_ctrl(priv->cpu_port));
+	}
+
+	return 0;
+}
+
+static int rtl93xx_set_features(struct net_device *dev, netdev_features_t features)
+{
+	struct rtl838x_eth_priv *priv = netdev_priv(dev);
+
+	if ((features ^ dev->features) & NETIF_F_RXCSUM) {
+		if (!(features & NETIF_F_RXCSUM))
+			sw_w32_mask(BIT(4), 0, priv->r->mac_port_ctrl(priv->cpu_port));
+		else
+			sw_w32_mask(0, BIT(4), priv->r->mac_port_ctrl(priv->cpu_port));
+	}
+
+	return 0;
+}
+
 static const struct net_device_ops rtl838x_eth_netdev_ops = {
 	.ndo_open = rtl838x_eth_open,
 	.ndo_stop = rtl838x_eth_stop,
@@ -1846,6 +1987,9 @@ static const struct net_device_ops rtl838x_eth_netdev_ops = {
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_rx_mode = rtl838x_eth_set_multicast_list,
 	.ndo_tx_timeout = rtl838x_eth_tx_timeout,
+	.ndo_set_features = rtl83xx_set_features,
+	.ndo_fix_features = rtl838x_fix_features,
+	.ndo_setup_tc = rtl83xx_setup_tc,
 };
 
 static const struct net_device_ops rtl839x_eth_netdev_ops = {
@@ -1857,6 +2001,9 @@ static const struct net_device_ops rtl839x_eth_netdev_ops = {
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_rx_mode = rtl839x_eth_set_multicast_list,
 	.ndo_tx_timeout = rtl838x_eth_tx_timeout,
+	.ndo_set_features = rtl83xx_set_features,
+	.ndo_fix_features = rtl838x_fix_features,
+	.ndo_setup_tc = rtl83xx_setup_tc,
 };
 
 static const struct net_device_ops rtl930x_eth_netdev_ops = {
@@ -1868,6 +2015,9 @@ static const struct net_device_ops rtl930x_eth_netdev_ops = {
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_rx_mode = rtl930x_eth_set_multicast_list,
 	.ndo_tx_timeout = rtl838x_eth_tx_timeout,
+	.ndo_set_features = rtl93xx_set_features,
+	.ndo_fix_features = rtl838x_fix_features,
+	.ndo_setup_tc = rtl83xx_setup_tc,
 };
 
 static const struct net_device_ops rtl931x_eth_netdev_ops = {
@@ -1879,6 +2029,8 @@ static const struct net_device_ops rtl931x_eth_netdev_ops = {
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_rx_mode = rtl931x_eth_set_multicast_list,
 	.ndo_tx_timeout = rtl838x_eth_tx_timeout,
+	.ndo_set_features = rtl93xx_set_features,
+	.ndo_fix_features = rtl838x_fix_features,
 };
 
 static const struct phylink_mac_ops rtl838x_phylink_ops = {
@@ -1901,11 +2053,11 @@ static int __init rtl838x_eth_probe(struct platform_device *pdev)
 	struct device_node *dn = pdev->dev.of_node;
 	struct rtl838x_eth_priv *priv;
 	struct resource *res, *mem;
-	const void *mac;
 	phy_interface_t phy_mode;
 	struct phylink *phylink;
 	int err = 0, i, rxrings, rxringlen;
 	struct ring_b *ring;
+	const void *mac;
 
 	pr_info("Probing RTL838X eth device pdev: %x, dev: %x\n",
 		(u32)pdev, (u32)(&(pdev->dev)));
@@ -1947,7 +2099,7 @@ static int __init rtl838x_eth_probe(struct platform_device *pdev)
 		err = -ENXIO;
 		goto err_free;
 	}
-
+	pr_info("Allocate %ld bytes for DMA\n", rxrings * rxringlen * RING_BUFFER + sizeof(struct ring_b) + sizeof(struct notify_b));
 	/* Allocate buffer memory */
 	priv->membase = dmam_alloc_coherent(&pdev->dev, rxrings * rxringlen * RING_BUFFER
 				+ sizeof(struct ring_b) + sizeof(struct notify_b),
@@ -1975,6 +2127,8 @@ static int __init rtl838x_eth_probe(struct platform_device *pdev)
 	dev->ethtool_ops = &rtl838x_ethtool_ops;
 	dev->min_mtu = ETH_ZLEN;
 	dev->max_mtu = 1536;
+	dev->features = NETIF_F_RXCSUM | NETIF_F_HW_CSUM;
+	dev->hw_features = NETIF_F_RXCSUM;
 
 	priv->id = soc_info.id;
 	priv->family_id = soc_info.family;

@@ -175,6 +175,7 @@ static u64 rtl931x_read_cam(int idx, struct rtl838x_l2_entry *e)
 	// TODO: Implement
 	return entry;
 }
+
 irqreturn_t rtl931x_switch_irq(int irq, void *dev_id)
 {
 	struct dsa_switch *ds = dev_id;
@@ -198,7 +199,6 @@ irqreturn_t rtl931x_switch_irq(int irq, void *dev_id)
 	}
 	return IRQ_HANDLED;
 }
-
 
 int rtl931x_write_phy(u32 port, u32 page, u32 reg, u32 val)
 {
@@ -264,6 +264,73 @@ int rtl931x_read_phy(u32 port, u32 page, u32 reg, u32 *val)
 	return 0;
 }
 
+/*
+ * Read an mmd register of the PHY
+ */
+int rtl931x_read_mmd_phy(u32 port, u32 devnum, u32 regnum, u32 *val)
+{
+	int err = 0;
+	u32 v;
+	int type = 1; // TODO: For C45 PHYs need to set to 2
+
+	mutex_lock(&smi_lock);
+
+	// Set PHY to access via port-number
+	sw_w32(port << 5, RTL931X_SMI_INDRT_ACCESS_BC_PHYID_CTRL);
+
+	// Set MMD device number and register to write to
+	sw_w32(devnum << 16 | (regnum & 0xffff), RTL931X_SMI_INDRT_ACCESS_MMD_CTRL);
+
+	v = type << 2 | BIT(0); // MMD-access-type | EXEC
+	sw_w32(v, RTL931X_SMI_INDRT_ACCESS_CTRL_0);
+
+	do {
+		v = sw_r32(RTL931X_SMI_INDRT_ACCESS_CTRL_0);
+	} while (v & BIT(0));
+
+	// There is no error-checking via BIT 1 of v, as it does not seem to be set correctly
+
+	*val = (sw_r32(RTL931X_SMI_INDRT_ACCESS_CTRL_3) & 0xffff);
+
+	pr_debug("%s: port %d, regnum: %x, val: %x (err %d)\n", __func__, port, regnum, *val, err);
+
+	mutex_unlock(&smi_lock);
+
+	return err;
+}
+
+/*
+ * Write to an mmd register of the PHY
+ */
+int rtl931x_write_mmd_phy(u32 port, u32 devnum, u32 regnum, u32 val)
+{
+	int err = 0;
+	u32 v;
+	int type = 1; // TODO: For C45 PHYs need to set to 2
+
+	mutex_lock(&smi_lock);
+
+	// Set PHY to access via port-number
+	sw_w32(port << 5, RTL931X_SMI_INDRT_ACCESS_BC_PHYID_CTRL);
+
+	// Set data to write
+	sw_w32_mask(0xffff << 16, val << 16, RTL931X_SMI_INDRT_ACCESS_CTRL_3);
+
+	// Set MMD device number and register to write to
+	sw_w32(devnum << 16 | (regnum & 0xffff), RTL931X_SMI_INDRT_ACCESS_MMD_CTRL);
+
+	v = BIT(4) | type << 2 | BIT(0); // WRITE | MMD-access-type | EXEC
+	sw_w32(v, RTL931X_SMI_INDRT_ACCESS_CTRL_0);
+
+	do {
+		v = sw_r32(RTL931X_SMI_INDRT_ACCESS_CTRL_0);
+	} while (v & BIT(0));
+
+	pr_debug("%s: port %d, regnum: %x, val: %x (err %d)\n", __func__, port, regnum, val, err);
+	mutex_unlock(&smi_lock);
+	return err;
+}
+
 void rtl931x_print_matrix(void)
 {
 	volatile u64 *ptr = RTL838X_SW_BASE + RTL839X_PORT_ISO_CTRL(0);
@@ -273,6 +340,103 @@ void rtl931x_print_matrix(void)
 		pr_info("> %16llx %16llx %16llx %16llx\n",
 			ptr[i + 0], ptr[i + 1], ptr[i + 2], ptr[i + 3]);
 	pr_info("CPU_PORT> %16llx\n", ptr[52]);
+}
+
+void rtl931x_set_distribution_algorithm(int group, int algoidx, u32 algomsk)
+{
+	u32 l3shift = 0;
+	u32 newmask = 0;
+	/* unless we clarified how the algo index is configured, we set it to 0 */
+	algoidx=0;
+	if (algomsk & TRUNK_DISTRIBUTION_ALGO_SIP_BIT) {
+		l3shift = 4;
+		newmask |= TRUNK_DISTRIBUTION_ALGO_L3_SIP_BIT;
+	}
+	if (algomsk & TRUNK_DISTRIBUTION_ALGO_DIP_BIT) {
+		l3shift = 4;
+		newmask |= TRUNK_DISTRIBUTION_ALGO_L3_DIP_BIT;
+	}
+	if (algomsk & TRUNK_DISTRIBUTION_ALGO_SRC_L4PORT_BIT) {
+		l3shift = 4;
+		newmask |= TRUNK_DISTRIBUTION_ALGO_L3_SRC_L4PORT_BIT;
+	}
+	if (algomsk & TRUNK_DISTRIBUTION_ALGO_SRC_L4PORT_BIT) {
+		l3shift = 4;
+		newmask |= TRUNK_DISTRIBUTION_ALGO_L3_SRC_L4PORT_BIT;
+	}
+	if (l3shift == 4)
+	{
+		if (algomsk & TRUNK_DISTRIBUTION_ALGO_SMAC_BIT) {
+			newmask |= TRUNK_DISTRIBUTION_ALGO_L3_SMAC_BIT;
+		}
+		if (algomsk & TRUNK_DISTRIBUTION_ALGO_DMAC_BIT) {
+			newmask |= TRUNK_DISTRIBUTION_ALGO_L3_DMAC_BIT;
+		}
+	} else  {
+		if (algomsk & TRUNK_DISTRIBUTION_ALGO_SMAC_BIT) {
+			newmask |= TRUNK_DISTRIBUTION_ALGO_L2_SMAC_BIT;
+		}
+		if (algomsk & TRUNK_DISTRIBUTION_ALGO_DMAC_BIT) {
+			newmask |= TRUNK_DISTRIBUTION_ALGO_L2_DMAC_BIT;
+		}
+	}
+	sw_w32(newmask << l3shift, RTL931X_TRK_HASH_CTRL + (algoidx << 2));
+}
+
+void rtl931x_set_receive_management_action(int port, rma_ctrl_t type, action_type_t action)
+{
+	u32 value = 0;
+	
+	/* hack for value mapping */
+	if (type == GRATARP && action == COPY2CPU)
+		action = TRAP2MASTERCPU;
+
+	switch(action) {
+	case FORWARD:
+	    value = 0;
+	break;
+	case DROP:
+	    value = 1;
+	break;
+	case TRAP2CPU:
+	    value = 2;
+	break;
+	case TRAP2MASTERCPU:
+	    value = 3;
+	break;
+	case FLOODALL:
+	    value = 4;
+	break;
+	default:
+	break;
+	}
+	
+	switch(type) {
+	case BPDU:
+		sw_w32_mask(7 << ((port % 10) * 3), value << ((port % 10) * 3), RTL931X_RMA_BPDU_CTRL + ((port / 10) << 2));
+	break;
+	case PTP:
+		//udp
+		sw_w32_mask(3 << 2, value << 2, RTL931X_RMA_PTP_CTRL + (port << 2));
+		//eth2
+		sw_w32_mask(3, value, RTL931X_RMA_PTP_CTRL + (port << 2));
+	break;
+	case PTP_UDP:
+		sw_w32_mask(3 << 2, value << 2, RTL931X_RMA_PTP_CTRL + (port << 2));
+	break;
+	case PTP_ETH2:
+		sw_w32_mask(3, value, RTL931X_RMA_PTP_CTRL + (port << 2));
+	break;
+	case LLTP:
+		sw_w32_mask(7 << ((port % 10) * 3), value << ((port % 10) * 3), RTL931X_RMA_LLTP_CTRL + ((port / 10) << 2));
+	break;
+	case EAPOL:
+		sw_w32_mask(7 << ((port % 10) * 3), value << ((port % 10) * 3), RTL931X_RMA_EAPOL_CTRL + ((port / 10) << 2));
+	break;
+	case GRATARP:
+		sw_w32_mask(3 << ((port & 0xf) << 1), value << ((port & 0xf) << 1), RTL931X_TRAP_ARP_GRAT_PORT_ACT + ((port >> 4) << 2));
+	break;
+	}
 }
 
 const struct rtl838x_reg rtl931x_reg = {
@@ -317,10 +481,31 @@ const struct rtl838x_reg rtl931x_reg = {
 	.mac_tx_pause_sts = RTL931X_MAC_TX_PAUSE_STS,
 	.read_l2_entry_using_hash = rtl931x_read_l2_entry_using_hash,
 	.read_cam = rtl931x_read_cam,
-	.vlan_port_egr_filter = RTL931X_VLAN_PORT_EGR_FLTR(0),
-	.vlan_port_igr_filter = RTL931X_VLAN_PORT_IGR_FLTR(0),
+	.vlan_port_egr_filter = RTL931X_VLAN_PORT_EGR_FLTR,
+	.vlan_port_igr_filter = RTL931X_VLAN_PORT_IGR_FLTR,
 //	.vlan_port_pb = does not exist
 	.vlan_port_tag_sts_ctrl = RTL931X_VLAN_PORT_TAG_CTRL,
 	.trk_mbr_ctr = rtl931x_trk_mbr_ctr,
+	.rma_bpdu_ctrl = RTL931X_RMA_BPDU_CTRL,
+	.rma_ptp_ctrl = RTL931X_RMA_PTP_CTRL,
+	.rma_lltp_ctrl = RTL931X_RMA_LLTP_CTRL,
+	.rma_eapol_ctrl = RTL931X_RMA_EAPOL_CTRL,
+	.rma_bpdu_ctrl_div = 10,
+	.rma_ptp_ctrl_div = 1,
+	.rma_lltp_ctrl_div = 10,
+	.rma_eapol_ctrl_div = 10,
+	.storm_ctrl_port_uc = RTL931X_STORM_CTRL_PORT_UC_0(0),
+	.storm_ctrl_port_bc = RTL931X_STORM_CTRL_PORT_BC_0(0),
+	.storm_ctrl_port_mc = RTL931X_STORM_CTRL_PORT_MC_0(0),
+	.storm_ctrl_port_uc_shift = 3,
+	.storm_ctrl_port_bc_shift = 3,
+	.storm_ctrl_port_mc_shift = 3,
+	.vlan_ctrl = RTL931X_VLAN_CTRL,
+	.sflow_ctrl = RTL931X_SFLOW_CTRL,
+	.sflow_port_rate_ctrl = RTL931X_SFLOW_PORT_RATE_CTRL,
+	.trk_hash_ctrl = RTL931X_TRK_HASH_CTRL,
+//	.trk_hash_idx_ctrl = RTL931X_TRK_HASH_IDX_CTRL,
+	.set_distribution_algorithm = rtl931x_set_distribution_algorithm,
+	.set_receive_management_action = rtl931x_set_receive_management_action,
 };
 

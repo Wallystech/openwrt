@@ -177,6 +177,7 @@
 #define RTL839X_RMA_CTRL_2			(0x1208)
 #define RTL839X_RMA_CTRL_3			(0x120C)
 
+#define RTL930X_VLAN_APP_PKT_CTRL		(0xA23C)
 #define RTL930X_RMA_CTRL_0			(0x9E60)
 #define RTL930X_RMA_CTRL_1			(0x9E64)
 #define RTL930X_RMA_CTRL_2			(0x9E68)
@@ -423,6 +424,6 @@ int rtl930x_write_phy(u32 port, u32 page, u32 reg, u32 val);
 int rtl930x_read_phy(u32 port, u32 page, u32 reg, u32 *val);
 int rtl931x_write_phy(u32 port, u32 page, u32 reg, u32 val);
 int rtl931x_read_phy(u32 port, u32 page, u32 reg, u32 *val);
-void rtl9300_sds_power(int sds_num, int val);
+int rtl83xx_setup_tc(struct net_device *dev, enum tc_setup_type type, void *type_data);
 
 #endif /* _RTL838X_ETH_H */

@@ -19,12 +19,11 @@ board=$(board_name)
 board_config_update
 
 lan_list=""
-for lan in /sys/class/net/lan*; do
-	lan_list="$lan_list $(basename $lan)"
+for lan in $(ls -d /sys/class/net/lan* | cut -dn -f3 |sort -n); do
+	lan_list="$lan_list lan$lan"
 done
 ucidef_set_bridge_device switch
 ucidef_set_interface_wan "$lan_list"
-ucidef_set_interface "lan" device "lan1:t" protocol "static" vlan 100
 
 lan_mac=""
 wan_mac=""
@@ -32,13 +31,11 @@ label_mac=""
 case $board in
 *)
 	wan_mac=$(mtd_get_mac_ascii u-boot-env ethaddr)
+	lan_mac=$(macaddr_add $wan_mac 1)
 	label_mac=$lan_mac
 	;;
 esac
 
-lan_mac=$(macaddr_setbit_la $wan_mac)
-
-ucidef_set_interface_macaddr "lan" $lan_mac
 ucidef_set_interface_macaddr "wan" $wan_mac
 ucidef_set_bridge_mac "$wan_mac"
 ucidef_set_network_device_mac eth0 $wan_mac
@@ -49,6 +46,9 @@ done
 [ -n "$label_mac" ] && ucidef_set_label_macaddr $label_mac
 
 case $board in
+edgecore,ecs4100-12ph)
+	ucidef_set_poe 130 "lan1 lan2 lan3 lan4 lan5 lan6 lan7 lan8"
+	;;
 netgear,gs110tpp-v1)
 	ucidef_set_poe 130 "$lan_list"
 	;;

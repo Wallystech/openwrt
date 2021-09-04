@@ -47,30 +47,31 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				label = "u-boot";
+				label = "loader";
 				reg = <0x0000000 0x00e0000>;
 				read-only;
 			};
 
 			partition@e0000 {
-				label = "u-boot-env";
+				label = "bdinfo";
 				reg = <0x00e0000 0x0010000>;
 				read-only;
 			};
 
 			partition@f0000 {
-				label = "u-boot-env2";
+				label = "sysinfo";
 				reg = <0x00f0000 0x0010000>;
+				read-only;
 			};
 
 			partition@100000 {
-				label = "jffs";
+				label = "jffs2_cfg";
 				reg = <0x0100000 0x0100000>;
 				read-only;
 			};
 
 			partition@200000 {
-				label = "jffs2";
+				label = "jffs2_log";
 				reg = <0x0200000 0x0100000>;
 				read-only;
 			};

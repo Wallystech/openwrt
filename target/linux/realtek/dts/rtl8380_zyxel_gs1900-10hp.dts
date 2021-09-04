@@ -17,7 +17,7 @@
 	};
 
 	sfp0: sfp-p9 {
-		compatible = "sff,sfp";
+		compatible = "_sff,sfp";
 		i2c-bus = <&i2c0>;
 		los-gpio = <&gpio1 27 GPIO_ACTIVE_HIGH>;
 		tx-fault-gpio = <&gpio1 22 GPIO_ACTIVE_HIGH>;
@@ -36,7 +36,7 @@
 	};
 
 	sfp1: sfp-p10 {
-		compatible = "sff,sfp";
+		compatible = "_sff,sfp";
 		i2c-bus = <&i2c1>;
 		los-gpio = <&gpio1 33 GPIO_ACTIVE_HIGH>;
 		tx-fault-gpio = <&gpio1 28 GPIO_ACTIVE_HIGH>;

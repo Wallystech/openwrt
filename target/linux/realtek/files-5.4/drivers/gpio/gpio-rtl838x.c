@@ -126,6 +126,16 @@ void rtl838x_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
 	__asm__ volatile ("sync");
 }
 
+void rtl930x_gpio_set(struct gpio_chip *gc, unsigned int offset, int value)
+{
+	pr_debug("rtl838x_set: %d, value: %d\n", offset, value);
+	/* Internal GPIO of the RTL9300 */
+	if (value)
+		rtl83xx_w32_mask(0, BIT(offset), RTL930X_GPIO_PABCD_DAT);
+	else
+		rtl83xx_w32_mask(BIT(offset), 0, RTL930X_GPIO_PABCD_DAT);
+}
+
 static int rtl838x_direction_input(struct gpio_chip *gc, unsigned int offset)
 {
 	pr_debug("%s: %d\n", __func__, offset);
@@ -139,12 +149,30 @@ static int rtl838x_direction_input(struct gpio_chip *gc, unsigned int offset)
 	return -ENOTSUPP;
 }
 
+static int rtl930x_direction_input(struct gpio_chip *gc, unsigned int offset)
+{
+	pr_debug("%s: %d\n", __func__, offset);
+
+	rtl83xx_w32_mask(BIT(offset), 0, RTL930X_GPIO_PABCD_DIR);
+	return 0;
+}
+
 static int rtl838x_direction_output(struct gpio_chip *gc, unsigned int offset, int value)
 {
 	pr_debug("%s: %d\n", __func__, offset);
 	if (offset < 32)
 		rtl83xx_w32_mask(0, BIT(offset), RTL838X_GPIO_PABC_DIR);
-	rtl838x_gpio_set(gc, offset, value);
+	rtl930x_gpio_set(gc, offset, value);
+
+	/* LED for PWR and SYS driver is direction output by default */
+	return 0;
+}
+
+static int rtl930x_direction_output(struct gpio_chip *gc, unsigned int offset, int value)
+{
+	pr_debug("%s: %d\n", __func__, offset);
+	rtl83xx_w32_mask(0, BIT(offset), RTL930X_GPIO_PABCD_DIR);
+	rtl930x_gpio_set(gc, offset, value);
 
 	/* LED for PWR and SYS driver is direction output by default */
 	return 0;
@@ -167,6 +195,16 @@ static int rtl838x_get_direction(struct gpio_chip *gc, unsigned int offset)
 		return 0;
 
 	return 0;
+}
+
+static int rtl930x_get_direction(struct gpio_chip *gc, unsigned int offset)
+{
+	u32 v = 0;
+
+	v = rtl83xx_r32(RTL930X_GPIO_PABCD_DIR);
+	if (v & BIT(offset))
+		return 0;
+	return 1;
 }
 
 static int rtl838x_gpio_get(struct gpio_chip *gc, unsigned int offset)
@@ -192,24 +230,14 @@ static int rtl838x_gpio_get(struct gpio_chip *gc, unsigned int offset)
 		return 0;
 	}
 
-/* BUG:
-	bit = (offset - 64) % 32;
-	if (offset >= 64 && offset < 96) {
-		if (sw_r32(RTL838X_LED1_SW_P_EN_CTRL) & BIT(bit))
-			return 1;
-		return 0;
-	}
-	if (offset >= 96 && offset < 128) {
-		if (sw_r32(RTL838X_LED1_SW_P_EN_CTRL) & BIT(bit))
-			return 1;
-		return 0;
-	}
-	if (offset >= 128 && offset < 160) {
-		if (sw_r32(RTL838X_LED1_SW_P_EN_CTRL) & BIT(bit))
-			return 1;
-		return 0;
-	}
-	*/ 
+	return 0;
+}
+
+static int rtl930x_gpio_get(struct gpio_chip *gc, unsigned int offset)
+{
+	u32 v = rtl83xx_r32(RTL930X_GPIO_PABCD_DAT);
+	if (v & BIT(offset))
+		return 1;
 	return 0;
 }
 
@@ -319,7 +347,7 @@ static int rtl838x_gpio_probe(struct platform_device *pdev)
 	struct rtl838x_gpios *gpios;
 	int err;
 
-	pr_info("Probing RTL838X GPIOs\n");
+	pr_info("Probing RTL838X GPIOs for %08x\n", soc_info.id);
 
 	if (!np) {
 		dev_err(&pdev->dev, "No DT found\n");
@@ -351,6 +379,9 @@ static int rtl838x_gpio_probe(struct platform_device *pdev)
 	case 0x8393:
 		pr_debug("Found RTL8393 GPIO\n");
 		break;
+	case 0x9302:
+		pr_info("Found RTL9302 GPIO\n");
+		break;
 	default:
 		pr_err("Unknown GPIO chip id (%04x)\n", gpios->id);
 		return -ENODEV;
@@ -363,6 +394,7 @@ static int rtl838x_gpio_probe(struct platform_device *pdev)
 		gpios->led_sw_p_en_ctrl = rtl838x_led_sw_p_en_ctrl;
 		gpios->ext_gpio_dir = rtl838x_ext_gpio_dir;
 		gpios->ext_gpio_data = rtl838x_ext_gpio_data;
+		gpios->irq = 31;
 	}
 
 	if (soc_info.family == RTL8390_FAMILY_ID) {
@@ -372,30 +404,46 @@ static int rtl838x_gpio_probe(struct platform_device *pdev)
 		gpios->led_sw_p_en_ctrl = rtl839x_led_sw_p_en_ctrl;
 		gpios->ext_gpio_dir = rtl839x_ext_gpio_dir;
 		gpios->ext_gpio_data = rtl839x_ext_gpio_data;
+		gpios->irq = 31;
 	}
 
-	gpios->dev = dev;
-	gpios->gc.base = 0;
-	/* 0-31: internal
-	 * 32-63, LED control register
-	 * 64-95: PORT-LED 0
-	 * 96-127: PORT-LED 1
-	 * 128-159: PORT-LED 2
-	 */
-	gpios->gc.ngpio = 160;
+	if (soc_info.family == RTL9300_FAMILY_ID) {
+		gpios->irq = 13;
+	}
+
 	gpios->gc.label = "rtl838x";
 	gpios->gc.parent = dev;
 	gpios->gc.owner = THIS_MODULE;
 	gpios->gc.can_sleep = true;
-	gpios->irq = 31;
+	gpios->dev = dev;
+	gpios->gc.base = 0;
 
-	gpios->gc.direction_input = rtl838x_direction_input;
-	gpios->gc.direction_output = rtl838x_direction_output;
-	gpios->gc.set = rtl838x_gpio_set;
-	gpios->gc.get = rtl838x_gpio_get;
-	gpios->gc.get_direction = rtl838x_get_direction;
+	if (soc_info.family != RTL9300_FAMILY_ID) {
+		/* 0-31: internal
+		* 32-63, LED control register
+		* 64-95: PORT-LED 0
+		* 96-127: PORT-LED 1
+		* 128-159: PORT-LED 2
+		*/
+		gpios->gc.ngpio = 160;
+
+		gpios->gc.direction_input = rtl838x_direction_input;
+		gpios->gc.direction_output = rtl838x_direction_output;
+		gpios->gc.set = rtl838x_gpio_set;
+		gpios->gc.get = rtl838x_gpio_get;
+		gpios->gc.get_direction = rtl838x_get_direction;
+	} else {
+		gpios->gc.ngpio = 32;
+
+		gpios->gc.direction_input = rtl930x_direction_input;
+		gpios->gc.direction_output = rtl930x_direction_output;
+		gpios->gc.set = rtl930x_gpio_set;
+		gpios->gc.get = rtl930x_gpio_get;
+		gpios->gc.get_direction = rtl930x_get_direction;
+	}
 
 	if (of_property_read_bool(np, "take-port-leds")) {
+	pr_info("A1\n");
 		if (of_property_read_u32(np, "leds-per-port", &gpios->leds_per_port))
 			gpios->leds_per_port = 2;
 		if (of_property_read_u32(np, "led-mode", &gpios->led_mode))
@@ -408,6 +456,7 @@ static int rtl838x_gpio_probe(struct platform_device *pdev)
 	}
 
 	err = devm_gpiochip_add_data(dev, &gpios->gc, gpios);
+
 	return err;
 }
 
