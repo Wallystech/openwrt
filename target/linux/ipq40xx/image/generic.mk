@@ -374,6 +374,19 @@ define Device/edgecore_ecw5211
 endef
 TARGET_DEVICES += edgecore_ecw5211
 
+define Device/edgecore_spw2ac1200
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Edgecore
+	DEVICE_MODEL := SPW2AC1200
+	SOC := qcom-ipq4018
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_DTS_CONFIG := config@ap.dk01.1-c2
+	DEVICE_PACKAGES := kmod-tpm-i2c-atmel kmod-usb-acm uboot-envtools kmod-usb-net kmod-usb-net-cdc-qmi uqmi
+endef
+TARGET_DEVICES += edgecore_spw2ac1200
+
 define Device/edgecore_oap100
 	$(call Device/FitImage)
 	$(call Device/UbiFit)

@@ -71,6 +71,7 @@ qxwlan,e2600ac-c2)
 	ucidef_set_led_wlan "wlan5g" "WLAN1" "green:wlan1" "phy1tpt"
 	;;
 edgecore,ecw5211 |\
+edgecore,spw2ac1200 |\
 cig,wf610d |\
 zyxel,nbg6617 |\
 zyxel,wre6606)

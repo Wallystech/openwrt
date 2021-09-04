@@ -76,7 +76,9 @@ platform_do_upgrade() {
 	tp-link,ec420-g1)
 		nand_do_upgrade "$1"
 		;;
-	alfa-network,ap120c-ac)
+	alfa-network,ap120c-ac|\
+	edgecore,spw2ac1200)
+		mkdir -p /var/lock/
 		part="$(awk -F 'ubi.mtd=' '{printf $2}' /proc/cmdline | sed -e 's/ .*$//')"
 		if [ "$part" = "rootfs1" ]; then
 			fw_setenv active 2 || exit 1

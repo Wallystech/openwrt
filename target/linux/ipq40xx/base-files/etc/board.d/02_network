@@ -45,6 +45,7 @@ ipq40xx_setup_interfaces()
 	cilab,meshpoint-one|\
 	cig,wf610d|\
 	edgecore,ecw5211|\
+	edgecore,spw2ac1200 |\
 	edgecore,oap100|\
 	openmesh,a42|\
 	openmesh,a62)
