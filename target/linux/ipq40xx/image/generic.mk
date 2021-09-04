@@ -816,3 +816,18 @@ define Device/zyxel_wre6606
 	DEVICE_PACKAGES := -kmod-ath10k-ct kmod-ath10k-ct-smallbuffers
 endef
 TARGET_DEVICES += zyxel_wre6606
+
+define Device/tp-link_ec420_g1
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_TITLE := tp-link EC420 G1
+	BOARD_NAME := ec420_g1
+	DEVICE_DTS := qcom-ipq4019-tp-link-ec420-g1
+	KERNEL_SIZE := 4096k
+	IMAGE_SIZE := 26624k
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	SUPPORTED_DEVICES := tp-link,ec420-g1
+	DEVICE_PACKAGES := ath10k-firmware-qca9984-ct ipq-wifi-tp-link_ec420-g1 uboot-envtools
+endef
+TARGET_DEVICES += tp-link_ec420_g1

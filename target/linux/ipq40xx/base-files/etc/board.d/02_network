@@ -32,8 +32,9 @@ ipq40xx_setup_interfaces()
 	mikrotik,sxtsq-5-ac|\
 	netgear,ex6100v2|\
 	netgear,ex6150v2|\
+	tp-link,ec420-g1|\
 	zyxel,wre6606)
-		ucidef_set_interface_lan "eth0"
+		ucidef_set_interface_wan "eth0"
 		;;
 	aruba,ap-303h)
 		ucidef_set_interfaces_lan_wan "eth0" "eth1"
