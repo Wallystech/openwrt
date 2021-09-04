@@ -830,6 +830,19 @@ define Device/zyxel_wre6606
 endef
 TARGET_DEVICES += zyxel_wre6606
 
+define Device/wallys_dr40x9
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Wallys
+	DEVICE_MODEL := DR40X9
+	SOC := qcom-ipq40x9
+	DEVICE_DTS_CONFIG := config@ap.dk07.1-c1
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_PACKAGES := ipq-wifi-wallys_dr40x9
+endef
+TARGET_DEVICES += wallys_dr40x9
+
 define Device/tp-link_ec420_g1
 	$(call Device/FitImage)
 	$(call Device/UbiFit)

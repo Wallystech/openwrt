@@ -51,6 +51,7 @@ ALLWIFIBOARDS:= \
 	plasmacloud_pa2200 \
 	qxwlan_e2600ac \
 	cig_wf610d \
+	wallys_dr40x9 \
 	tp-link_ec420-g1
 
 ALLWIFIPACKAGES:=$(foreach BOARD,$(ALLWIFIBOARDS),ipq-wifi-$(BOARD))
@@ -139,5 +140,6 @@ $(eval $(call generate-ipq-wifi-package,plasmacloud_pa2200,Plasma Cloud PA2200))
 $(eval $(call generate-ipq-wifi-package,qxwlan_e2600ac,Qxwlan E2600AC))
 $(eval $(call generate-ipq-wifi-package,cig_wf610d,CIG WF_610D))
 $(eval $(call generate-ipq-wifi-package,tp-link_ec420-g1,tp-link EC420-G1))
+$(eval $(call generate-ipq-wifi-package,wallys_dr40x9,Wallys DR40X9))
 
 $(foreach PACKAGE,$(ALLWIFIPACKAGES),$(eval $(call BuildPackage,$(PACKAGE))))

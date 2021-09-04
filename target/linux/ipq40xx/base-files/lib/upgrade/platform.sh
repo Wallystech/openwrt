@@ -73,6 +73,7 @@ platform_do_upgrade() {
 	luma,wrtq-329acn |\
 	mobipromo,cm520-79f |\
 	qxwlan,e2600ac-c2 |\
+	wallys,dr40x9 |\
 	tp-link,ec420-g1)
 		nand_do_upgrade "$1"
 		;;
