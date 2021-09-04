@@ -7,6 +7,10 @@ preinit_set_mac_address() {
 		ip link set dev eth0 address $(macaddr_add "$base_mac" +1)
 		ip link set dev eth1 address $(macaddr_add "$base_mac" +3)
 		;;
+	cig,wf610d)
+		base_mac=$(mtd_get_mac_ascii 0:APPSBLENV ethaddr)
+		ip link set eth0 address "${base_mac}"
+		;;
 	ezviz,cs-w3-wd1200g-eup)
 		ip link set dev eth0 address $(mtd_get_mac_binary "ART" 0x6)
 		ip link set dev eth1 address $(mtd_get_mac_binary "ART" 0x0)

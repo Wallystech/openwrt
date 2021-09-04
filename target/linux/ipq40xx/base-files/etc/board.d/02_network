@@ -42,6 +42,7 @@ ipq40xx_setup_interfaces()
 		;;
 	asus,map-ac2200|\
 	cilab,meshpoint-one|\
+	cig,wf610d|\
 	edgecore,ecw5211|\
 	edgecore,oap100|\
 	openmesh,a42|\

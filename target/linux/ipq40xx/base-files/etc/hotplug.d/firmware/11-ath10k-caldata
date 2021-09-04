@@ -93,6 +93,10 @@ case "$FIRMWARE" in
 		caldata_extract "ART" 0x1000 0x2f20
 		ath10k_patch_mac $(mtd_get_mac_binary ORGDATA 0x26)
 		;;
+	cig,wf610d)
+		caldata_extract "0:ART" 0x1000 0x2f20
+		ath10kcal_patch_mac_crc $(macaddr_add $(mtd_get_mac_ascii 0:APPSBLENV ethaddr) +2)
+		;;
 	cellc,rtl30vw |\
 	compex,wpj419 |\
 	compex,wpj428 |\
@@ -201,6 +205,10 @@ case "$FIRMWARE" in
 	buffalo,wtr-m2133hp)
 		caldata_extract "ART" 0x5000 0x2f20
 		ath10k_patch_mac $(mtd_get_mac_binary ORGDATA 0x2c)
+		;;
+	cig,wf610d)
+		caldata_extract "0:ART" 0x5000 0x2f20
+		ath10kcal_patch_mac_crc $(macaddr_add $(mtd_get_mac_ascii 0:APPSBLENV ethaddr) +3)
 		;;
 	cellc,rtl30vw |\
 	compex,wpj419 |\

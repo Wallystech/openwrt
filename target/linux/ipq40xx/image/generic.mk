@@ -271,6 +271,20 @@ define Device/cilab_meshpoint-one
 endef
 TARGET_DEVICES += cilab_meshpoint-one
 
+define Device/cig_wf610d
+	$(call Device/FitImage)
+	DEVICE_TITLE := CIG WF_610D
+	DEVICE_DTS := qcom-ipq4029-ap-cig-wf610d
+	KERNEL_INSTALL := 1
+	KERNEL_SIZE := 4048k
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_PACKAGES := ipq-wifi-cig_wf610d
+	IMAGES = sysupgrade.bin
+	IMAGE/sysupgrade.bin := append-kernel | append-rootfs | pad-rootfs | append-metadata
+endef
+TARGET_DEVICES += cig_wf610d
+
 define Device/compex_wpj419
 	$(call Device/FitImage)
 	$(call Device/UbiFit)
