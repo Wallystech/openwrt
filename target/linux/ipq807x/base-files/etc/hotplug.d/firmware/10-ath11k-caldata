@@ -47,7 +47,7 @@ case "$FIRMWARE" in
 	tplink,ex227|\
 	tplink,ex447|\
 	sercomm,wallaby)
-                caldata_extract "0:ART" 0x1000 0x20000  
+                caldata_extract "0:ART" 0x1000 0x20000
 		;;
 	esac
 	;;
@@ -58,21 +58,22 @@ case "$FIRMWARE" in
 	edgecore,eap101|\
 	qcom,ipq6018-cp01|\
 	xiaomi,ax1800)
-                caldata_extract "0:ART" 0x1000 0x20000  
+                caldata_extract "0:ART" 0x1000 0x10000  
 		;;
 	esac
 	;;
 ath11k/QCN9074/hw1.0/caldata_1.bin)
 	case "$board" in
 	qcom,ipq807x-hk14)
-                caldata_extract "0:ART" 0x26800 0x20000  
+                caldata_extract "0:ART" 0x26800 0x10000  
 		;;
 	esac
 	;;
 ath11k/QCN9074/hw1.0/caldata_2.bin)
 	case "$board" in
-	qcom,ipq807x-hk14)
-                caldata_extract "0:ART" 0x4C000 0x20000  
+	qcom,ipq807x-hk14|\
+	qcom,ipq5018-mp03.3)
+                caldata_extract "0:ART" 0x4C000 0x10000  
 		;;
 	esac
 	;;

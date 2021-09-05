@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 ARCH:=arm
 BOARD:=ipq807x
 BOARDNAME:=Qualcomm Atheros AX
-SUBTARGETS:=ipq807x ipq60xx
+SUBTARGETS:=ipq807x ipq60xx ipq50xx
 FEATURES:=squashfs ramdisk nand pcie usb
 KERNELNAME:=Image dtbs
 CPU_TYPE:=cortex-a7

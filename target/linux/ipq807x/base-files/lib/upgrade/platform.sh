@@ -30,7 +30,8 @@ platform_check_image() {
 	tplink,ex447|\
 	qcom,ipq6018-cp01|\
 	qcom,ipq807x-hk01|\
-	qcom,ipq807x-hk14)
+	qcom,ipq807x-hk14|\
+	qcom,ipq5018-mp03.3)
 		[ "$magic_long" = "73797375" ] && return 0
 		;;
 	esac
@@ -52,6 +53,7 @@ platform_do_upgrade() {
 	qcom,ipq6018-cp01|\
 	qcom,ipq807x-hk01|\
 	qcom,ipq807x-hk14|\
+	qcom,ipq5018-mp03.3|\
 	tplink,ex447|\
 	tplink,ex227)	
 		nand_upgrade_tar "$1"

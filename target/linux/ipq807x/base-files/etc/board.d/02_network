@@ -24,6 +24,7 @@ qcom_setup_interfaces()
 		ucidef_set_interface_wan "eth5"
 		;;
 	cig,wf194c|\
+	qcom,ipq5018-mp03.3|\
 	sercomm,wallaby)
 		ucidef_set_interface_lan "eth0"
 		ucidef_set_interface_wan "eth1"
