@@ -1,0 +1,40 @@
+--- a/backport-include/linux/of_net.h
++++ b/backport-include/linux/of_net.h
+@@ -2,6 +2,7 @@
+ #define _BP_OF_NET_H
+ #include_next <linux/of_net.h>
+ #include <linux/version.h>
++#include <linux/etherdevice.h>
+ 
+ #ifndef CONFIG_OF
+ #if LINUX_VERSION_IS_LESS(3,10,0)
+@@ -12,18 +13,23 @@ static inline const void *of_get_mac_add
+ #endif
+ #endif
+ 
+-/* The behavior of of_get_mac_address() changed in kernel 5.2, it now
+- * returns an error code and not NULL in case of an error.
++/* The behavior of of_get_mac_address() changed in kernel 5.15, it now
++ * accepts an argument with the destination buffer to copy the address to
+  */
+-#if LINUX_VERSION_IS_LESS(5,2,0)
+-static inline const void *backport_of_get_mac_address(struct device_node *np)
++#if LINUX_VERSION_IS_LESS(5,15,0)
++static inline int backport_of_get_mac_address(struct device_node *np, u8 *addr)
+ {
+ 	const void *mac = of_get_mac_address(np);
+ 
++	if (IS_ERR(mac))
++		return PTR_ERR(mac);
++
+ 	if (!mac)
+-		return ERR_PTR(-ENODEV);
++		return -ENODEV;
++
++	memcpy(addr, mac, ETH_ALEN);
+ 
+-	return mac;
++	return 0;
+ }
+ #define of_get_mac_address LINUX_BACKPORT(of_get_mac_address)
+ #endif /* < 5.2 */
