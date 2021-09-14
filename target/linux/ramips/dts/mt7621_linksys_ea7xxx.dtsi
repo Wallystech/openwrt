@@ -82,15 +82,14 @@
 		#size-cells = <1>;
 
 		partition@0 {
-			label = "boot";
+			label = "u-boot";
 			reg = <0x0 0x80000>;
 			read-only;
 		};
 
 		partition@80000 {
-			label = "u_env";
+			label = "u-boot-env";
 			reg = <0x80000 0x40000>;
-			read-only;
 		};
 
 		factory: partition@c0000 {
@@ -117,19 +116,7 @@
 
 		partition@580000 {
 			label = "ubi";
-			reg = <0x580000 0x2400000>;
-		};
-
-		partition@2980000 {
-			label = "alt_kernel";
-			reg = <0x2980000 0x400000>;
-			read-only;
-		};
-
-		partition@2d80000 {
-			label = "alt_rootfs";
-			reg = <0x2d80000 0x2400000>;
-			read-only;
+			reg = <0x580000 0x4c00000>;
 		};
 
 		partition@5180000 {
