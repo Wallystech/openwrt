@@ -4,7 +4,7 @@ PKG_NAME:=ucentral-event
 PKG_RELEASE:=1
 
 #PKG_SOURCE_URL=https://github.com/blogic/ucentral-event.git
-3PKG_SOURCE_PROTO:=git
+#PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2021-04-13
 PKG_SOURCE_VERSION:=863be47d264ea3fefccadfcfa53c1af53f54dd3b
 

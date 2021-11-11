@@ -37,6 +37,14 @@ define Device/qcom_cp01_c1
 endef
 TARGET_DEVICES += qcom_cp01_c1
 
+define Device/wallys_dr60xx
+  DEVICE_TITLE := Wallys DR60xx
+  DEVICE_DTS := qcom-ipq6018-cp01-c4
+  SUPPORTED_DEVICES := Wallys,dr60xx
+  DEVICE_PACKAGES := ath11k-wifi-qcom-ipq6018
+endef
+TARGET_DEVICES += wallys_dr60xx
+
 define Device/xiaomi_ax1800
   DEVICE_TITLE := Xiaomi AX1800
   DEVICE_DTS := qcom-ipq6018-miwifi-ax1800
