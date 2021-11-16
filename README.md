@@ -34,18 +34,17 @@ subversion libz-dev libc-dev rsync which
 1. Run `./scripts/feeds update ` to obtain all the latest package definitions
    defined in feeds.conf / feeds.conf.default
 
-2. Run `./scripts/feeds install -a` to install symlinks for all obtained
+2. Run  the following command to install symlinks for all obtained
 
-	./scripts/feeds install -a -f -p ipq807x
+	./scripts/feeds install -a -f -p ipq807x  
+	./scripts/feeds install -a -f -p wifi_ax  
+	./scripts/feeds install -a -f -p ucentral  
+	./scripts/feeds install -a -f -p tip  
+	./scripts/feeds install -a -f -p luci  
+	./scripts/feeds install -a -f -p openflow  
+	./scripts/feeds install -a -f -p facebook  
+	./scripts/feeds install -a -f -p third_party  
 
-	./scripts/feeds install -a -f -p wifi_ax
-
-	./scripts/feeds install -a -f -p ucentral
-	./scripts/feeds install -a -f -p tip
-	./scripts/feeds install -a -f -p luci
-	./scripts/feeds install -a -f -p openflow
-	./scripts/feeds install -a -f -p facebook
-	./scripts/feeds install -a -f -p third_party
 3. cp configs/dr6018.config .config
 
 4. make V=99
