@@ -9,13 +9,16 @@ boot() {
 	local mtd=$(find_mtd_index certificates)
 	[ -n "$mtd" -a -f /sys/class/mtd/mtd$mtd/oobsize ] && ubiattach -p /dev/mtd$mtd
 	if [ -n "$(ubinfo -a | grep certificates)" ]; then
-		mount -t ubifs ubi0:certificates /certificates
-		mount -t ubifs ubi1:certificates /certificates
+		[ -e /dev/ubi0 ] && mount -t ubifs ubi0:certificates /certificates
+		[ -e /dev/ubi1 ] && mount -t ubifs ubi1:certificates /certificates
 	else
 		mount -t squashfs /dev/mtdblock$mtd /certificates
 	fi
 	[ -f /certificates/dev-id ] && {
 		cp /certificates/*.pem /etc/ucentral/
 		cp /certificates/dev-id /etc/ucentral/
+		chown root.network /etc/ucentral/*.pem 
+		chmod 0440 root.network /etc/ucentral/*.pem
+		chmod 0400 /etc/ucentral/dev-id
 	}
 }

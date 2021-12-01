@@ -40,6 +40,7 @@ case "$FIRMWARE" in
 "ath11k/IPQ8074/hw2.0/caldata.bin")
 	case "$board" in
 	cig,wf194c|\
+	cig,wf194c4|\
 	edgecore,eap102 |\
 	edgecore,eap106 |\
 	qcom,ipq807x-hk01|\
@@ -56,16 +57,19 @@ case "$FIRMWARE" in
 	cig,wf188|\
 	cig,wf188n|\
 	edgecore,eap101|\
+	hfcl,ion4xi|\
+	hfcl,ion4xe|\
+	wallys,dr6018|\
 	qcom,ipq6018-cp01|\
 	xiaomi,ax1800)
-                caldata_extract "0:ART" 0x1000 0x10000  
+                caldata_extract "0:ART" 0x1000 0x20000  
 		;;
 	esac
 	;;
 ath11k/QCN9074/hw1.0/caldata_1.bin)
 	case "$board" in
 	qcom,ipq807x-hk14)
-                caldata_extract "0:ART" 0x26800 0x10000  
+                caldata_extract "0:ART" 0x26800 0x20000  
 		;;
 	esac
 	;;
@@ -73,7 +77,7 @@ ath11k/QCN9074/hw1.0/caldata_2.bin)
 	case "$board" in
 	qcom,ipq807x-hk14|\
 	qcom,ipq5018-mp03.3)
-                caldata_extract "0:ART" 0x4C000 0x10000  
+                caldata_extract "0:ART" 0x4C000 0x20000  
 		;;
 	esac
 	;;

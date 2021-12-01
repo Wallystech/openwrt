@@ -6,8 +6,8 @@ PKG_RELEASE:=1
 PKG_LICENSE:=GPL-2.0
 PKG_MAINTAINER:=John Crispin <john@phrozen.org>
 
-PKG_SOURCE_URL=https://github.com/blogic/udhcpsnoop.git
-PKG_SOURCE_PROTO:=git
+#PKG_SOURCE_URL=https://github.com/blogic/udhcpsnoop.git
+#PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2021-04-12
 PKG_SOURCE_VERSION:=b86639904147a40be32ac43cd89c21109ffc3543
 

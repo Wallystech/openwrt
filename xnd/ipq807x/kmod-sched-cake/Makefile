@@ -11,7 +11,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=sched-cake
 PKG_RELEASE:=1
 
-#PKG_SOURCE_PROTO:=git
+PKG_SOURCE_PROTO:=git
 #PKG_SOURCE_URL:=https://github.com/dtaht/sch_cake.git
 PKG_SOURCE_DATE:=2021-07-09
 PKG_SOURCE_VERSION:=d9e1398cc9091e9e7c7a740361e4617b75c24427

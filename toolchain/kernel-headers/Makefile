@@ -12,6 +12,14 @@ BUILD_DIR := $(KERNEL_BUILD_DIR)
 override QUILT:=
 override HOST_QUILT:=
 
+include $(INCLUDE_DIR)/target.mk
+
+ifeq ($(KERNEL_PATCHVER),4.4)
+  KERNEL_PATCHVER := 5.10
+  KERNEL_NAME_SUFFIX:=
+endif
+
+include $(INCLUDE_DIR)/kernel-version.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=linux

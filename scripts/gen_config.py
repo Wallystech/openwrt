@@ -2,12 +2,13 @@
 
 from os import getenv
 from pathlib import Path
-from shutil import rmtree
+from shutil import rmtree, which
 from subprocess import run
 import sys
 import yaml
 
 profile_folder = Path(getenv("PROFILES", "./profiles")).absolute()
+warnings = []
 
 
 def die(msg: str):
@@ -36,7 +37,32 @@ def usage(code: int = 0):
     sys.exit(code)
 
 
-def load_yaml(fname: str, profile: dict, include = True):
+def process_host_dependency(dependecy: dict, profile: dict):
+    print(f"Checking host dependecy {dependecy['name']}")
+    found = False
+    for w in dependecy["which"]:
+        if which(w):
+            print(f"-> Found {w}")
+            found = True
+            break
+
+    if found:
+        profile["diffconfig"] += dependecy.get("success_diffconfig", "")
+    else:
+        if "warning" in dependecy:
+            warnings.append(f"Dependecy {dependecy['name']}: {dependecy['warning']}")
+        else:
+            warnings.append(
+                f"Dependecy {dependecy['name']}: Please install {dependecy['which']}"
+            )
+
+        if "fallback_diffconfig" in dependecy:
+            profile["diffconfig"] += dependecy["fallback_diffconfig"]
+        else:
+            die("Can't continue without dependency and no `fallback_diffconfig` set")
+
+
+def load_yaml(fname: str, profile: dict, include=True):
     profile_file = (profile_folder / fname).with_suffix(".yml")
 
     if not profile_file.is_file():
@@ -59,6 +85,9 @@ def load_yaml(fname: str, profile: dict, include = True):
                 if f.get("name", "") == "" or (f.get("uri", "") == "" and f.get("path", "") == ""):
                     die(f"Found bad feed {f}")
                 profile["feeds"][f.get("name")] = f
+        elif n in {"host_dependecies"}:
+            for d in new.get(n):
+                process_host_dependency(d, profile)
 
     if "include" in new and include:
         for i in range(len(new["include"])):
@@ -197,3 +226,7 @@ if __name__ == "__main__":
     print("Running make defconfig")
     if run(["make", "defconfig"]).returncode:
         die(f"Error running make defconfig")
+
+    print("#########################\n" * 3)
+    print("\n".join(warnings))
+    print("#########################\n" * 3)

@@ -48,14 +48,17 @@ hostapd_append_wpa_key_mgmt() {
 		;;
 		eap192)
 			append wpa_key_mgmt "WPA-EAP-SUITE-B-192"
+			append wpa_key_mgmt "WPA-EAP-SHA256"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
-			[ "${ieee80211w:-0}" -gt 0 ] && append wpa_key_mgmt "WPA-EAP-SHA256"
 		;;
-		eap-eap192)
-			append wpa_key_mgmt "WPA-EAP-SUITE-B-192"
+		eap-eap256)
 			append wpa_key_mgmt "WPA-EAP"
+			append wpa_key_mgmt "WPA-EAP-SHA256"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
-			[ "${ieee80211w:-0}" -gt 0 ] && append wpa_key_mgmt "WPA-EAP-SHA256"
+		;;
+		eap256)
+			append wpa_key_mgmt "WPA-EAP-SHA256"
+			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
 		;;
 		sae)
 			append wpa_key_mgmt "SAE"
@@ -111,6 +114,7 @@ hostapd_common_add_device_config() {
 
 	config_add_int airtime_mode
 
+	config_add_boolean multiple_bssid rnr_beacon he_co_locate ema
 	hostapd_add_log_config
 }
 
@@ -122,7 +126,8 @@ hostapd_prepare_device_config() {
 
 	json_get_vars country country3 country_ie beacon_int:100 dtim_period:2 doth require_mode legacy_rates \
 		acs_chan_bias local_pwr_constraint spectrum_mgmt_required airtime_mode cell_density \
-		rts_threshold beacon_rate rssi_reject_assoc_rssi rssi_ignore_probe_request maxassoc
+		rts_threshold beacon_rate rssi_reject_assoc_rssi rssi_ignore_probe_request maxassoc \
+		multiple_bssid he_co_locate rnr_beacon ema
 
 	hostapd_set_log_options base_cfg
 
@@ -132,6 +137,10 @@ hostapd_prepare_device_config() {
 	set_default legacy_rates 0
 	set_default airtime_mode 0
 	set_default cell_density 0
+	set_default he_co_locate 0
+	set_default rnr_beacon 0
+	set_default multiple_bssid 0
+	set_default ema 0
 
 	[ -n "$country" ] && {
 		append base_cfg "country_code=$country" "$N"
@@ -224,6 +233,10 @@ hostapd_prepare_device_config() {
 	append base_cfg "dtim_period=$dtim_period" "$N"
 	[ "$airtime_mode" -gt 0 ] && append base_cfg "airtime_mode=$airtime_mode" "$N"
 	[ -n "$maxassoc" ] && append base_cfg "iface_max_num_sta=$maxassoc" "$N"
+	[ "$rnr_beacon" -gt 0 ] && append base_cfg "rnr_beacon=$rnr_beacon" "$N"
+	[ "$he_co_locate" -gt 0 ] && append base_cfg "he_co_locate=$he_co_locate" "$N"
+	[ "$multiple_bssid" -gt 0 ] && append base_cfg "multiple_bssid=$multiple_bssid" "$N"
+	[ "$ema" -gt 0 ] && append base_cfg "ema=$ema" "$N"
 
 	json_get_values opts hostapd_options
 	for val in $opts; do
@@ -360,6 +373,8 @@ hostapd_common_add_bss_config() {
 
 	config_add_int eap_server
 	config_add_string eap_user_file ca_cert server_cert private_key private_key_passwd server_id
+
+	config_add_boolean ratelimit
 }
 
 hostapd_set_vlan_file() {
@@ -603,11 +618,11 @@ hostapd_set_bss_options() {
 	}
 
 	case "$auth_type" in
-		sae|owe|eap192|eap-eap192)
+		sae|owe|eap192|eap256)
 			set_default ieee80211w 2
 			set_default sae_require_mfp 1
 		;;
-		psk-sae)
+		psk-sae|eap-eap256)
 			set_default ieee80211w 1
 			set_default sae_require_mfp 1
 		;;
@@ -650,7 +665,7 @@ hostapd_set_bss_options() {
 			vlan_possible=1
 			wps_possible=1
 		;;
-		eap|eap192|eap-eap192)
+		eap|eap192|eap-eap256|eap256)
 			json_get_vars \
 				auth_server auth_secret auth_port \
 				dae_client dae_secret dae_port \
@@ -754,7 +769,7 @@ hostapd_set_bss_options() {
 	}
 
 	append bss_conf "ssid=$ssid" "$N"
-	[ -n "$network_bridge" ] && append bss_conf "bridge=$network_bridge" "$N"
+	[ -n "$network_bridge" ] && append bss_conf "bridge=$network_bridge${N}wds_bridge=" "$N"
 	[ -n "$network_ifname" ] && append bss_conf "snoop_iface=$network_ifname" "$N"
 	[ -n "$iapp_interface" ] && {
 		local ifname
@@ -886,7 +901,16 @@ hostapd_set_bss_options() {
 				json_get_vars ieee80211w_mgmt_cipher ieee80211w_max_timeout ieee80211w_retry_timeout
 				append bss_conf "ieee80211w=$ieee80211w" "$N"
 				[ "$ieee80211w" -gt "0" ] && {
-					append bss_conf "group_mgmt_cipher=${ieee80211w_mgmt_cipher:-AES-128-CMAC}" "$N"
+					case "$auth_type" in
+					eap192)
+						append bss_conf "group_mgmt_cipher=BIP-GMAC-256" "$N"
+						append bss_conf "group_cipher=GCMP-256" "$N"
+						;;
+					*)
+						append bss_conf "group_mgmt_cipher=${ieee80211w_mgmt_cipher:-AES-128-CMAC}" "$N"
+						;;
+					esac
+
 					[ -n "$ieee80211w_max_timeout" ] && \
 						append bss_conf "assoc_sa_query_max_timeout=$ieee80211w_max_timeout" "$N"
 					[ -n "$ieee80211w_retry_timeout" ] && \
@@ -974,7 +998,6 @@ hostapd_set_bss_options() {
 		[ -n "$iw_network_auth_type" ] && \
 			append bss_conf "network_auth_type=$iw_network_auth_type" "$N"
 		[ -n "$iw_gas_address3" ] && append bss_conf "gas_address3=$iw_gas_address3" "$N"
-		[ -n "$iw_qos_map_set" ] && append bss_conf "qos_map_set=$iw_qos_map_set" "$N"
 
 		json_for_each_item append_iw_roaming_consortium iw_roaming_consortium
 		json_for_each_item append_iw_anqp_elem iw_anqp_elem
@@ -993,6 +1016,12 @@ hostapd_set_bss_options() {
 			append bss_conf "anqp_3gpp_cell_net=$iw_anqp_3gpp_cell_net_conf" "$N"
 	fi
 
+	set_default iw_qos_map_set 0,0,2,16,1,1,255,255,18,22,24,38,40,40,44,46,48,56
+	case "$iw_qos_map_set" in
+		*,*);;
+		*) iw_qos_map_set="";;
+	esac
+	[ -n "$iw_qos_map_set" ] && append bss_conf "qos_map_set=$iw_qos_map_set" "$N"
 
 	local hs20 disable_dgaf osen anqp_domain_id hs20_deauth_req_timeout \
 		osu_ssid hs20_wan_metrics hs20_operating_class hs20_t_c_filename hs20_t_c_timestamp \
@@ -1200,10 +1229,10 @@ wpa_supplicant_add_network() {
 		default_disabled
 
 	case "$auth_type" in
-		sae|owe|eap192|eap-eap192)
+		sae|owe|eap-eap256)
 			set_default ieee80211w 2
 		;;
-		psk-sae)
+		psk-sae|eap192|eap256)
 			set_default ieee80211w 1
 		;;
 	esac
@@ -1281,7 +1310,7 @@ wpa_supplicant_add_network() {
 			fi
 			append network_data "$passphrase" "$N$T"
 		;;
-		eap|eap192|eap-eap192)
+		eap|eap192|eap-eap256|eap256)
 			hostapd_append_wpa_key_mgmt
 			key_mgmt="$wpa_key_mgmt"
 

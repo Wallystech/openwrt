@@ -105,6 +105,7 @@ case "$FIRMWARE" in
 	compex,wpj428 |\
 	edgecore,ecw5211 |\
 	edgecore,spw2ac1200 |\
+	edgecore,spw2ac1200-lan-poe |\
 	edgecore,oap100 |\
 	engenius,eap1300 |\
 	engenius,eap2200 |\
@@ -226,6 +227,7 @@ case "$FIRMWARE" in
 	compex,wpj428 |\
 	edgecore,ecw5211 |\
 	edgecore,spw2ac1200 |\
+	edgecore,spw2ac1200-lan-poe |\
 	edgecore,oap100 |\
 	engenius,eap1300 |\
 	engenius,eap2200 |\

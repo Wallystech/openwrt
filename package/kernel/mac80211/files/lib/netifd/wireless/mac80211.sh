@@ -53,6 +53,8 @@ drv_mac80211_init_device_config() {
 		he_spr_sr_control \
 		he_twt_required
 	config_add_int \
+		beamformer_antennas \
+		beamformee_antennas \
 		vht_max_a_mpdu_len_exp \
 		vht_max_mpdu \
 		vht_link_adapt \
@@ -294,6 +296,8 @@ mac80211_hostapd_setup_base() {
 			mu_beamformee:1 \
 			vht_txop_ps:1 \
 			htc_vht:1 \
+			beamformee_antennas:4 \
+			beamformer_antennas:4 \
 			rx_antenna_pattern:1 \
 			tx_antenna_pattern:1 \
 			vht_max_a_mpdu_len_exp:7 \
@@ -333,6 +337,18 @@ mac80211_hostapd_setup_base() {
 			RX-STBC-12:0x700:0x200:1 \
 			RX-STBC-123:0x700:0x300:1 \
 			RX-STBC-1234:0x700:0x400:1 \
+
+		[ "$(($vht_cap & 0x800))" -gt 0 -a "$su_beamformer" -gt 0 ] && {
+			cap_ant="$(( ( ($vht_cap >> 16) & 3 ) + 1 ))"
+			[ "$cap_ant" -gt "$beamformer_antennas" ] && cap_ant="$beamformer_antennas"
+			[ "$cap_ant" -gt 1 ] && vht_capab="$vht_capab[SOUNDING-DIMENSION-$cap_ant]"
+		}
+
+		[ "$(($vht_cap & 0x1000))" -gt 0 -a "$su_beamformee" -gt 0 ] && {
+			cap_ant="$(( ( ($vht_cap >> 13) & 3 ) + 1 ))"
+			[ "$cap_ant" -gt "$beamformee_antennas" ] && cap_ant="$beamformee_antennas"
+			[ "$cap_ant" -gt 1 ] && vht_capab="$vht_capab[BF-ANTENNA-$cap_ant]"
+		}
 
 		# supported Channel widths
 		vht160_hw=0
@@ -499,6 +515,7 @@ mac80211_get_addr() {
 
 mac80211_generate_mac() {
 	local phy="$1"
+	local multiple_bssid="$2"
 	local id="${macidx:-0}"
 
 	local ref="$(cat /sys/class/ieee80211/${phy}/macaddress)"
@@ -522,7 +539,10 @@ mac80211_generate_mac() {
 	local mask6=$6
 
 	local oIFS="$IFS"; IFS=":"; set -- $ref; IFS="$oIFS"
-
+	[ "$multiple_bssid" -eq 1 ] && {
+               printf "02:%s:%s:%s:%s:%02x" $b1 $2 $3 $4 $5 $macidx
+               return
+    }
 	macidx=$(($id + 1))
 
 	local use_global=0
@@ -635,6 +655,7 @@ mac80211_iw_interface_add() {
 }
 
 mac80211_prepare_vif() {
+	local multiple_bssid=$1
 	json_select config
 
 	json_get_vars ifname mode ssid wds powersave macaddr enable wpa_psk_file vlan_file
@@ -648,7 +669,7 @@ mac80211_prepare_vif() {
 	json_select ..
 
 	[ -n "$macaddr" ] || {
-		macaddr="$(mac80211_generate_mac $phy)"
+		macaddr="$(mac80211_generate_mac $phy $multiple_bssid)"
 		macidx="$(($macidx + 1))"
 	}
 
@@ -1017,6 +1038,7 @@ drv_mac80211_setup() {
 		txpower antenna_gain \
 		rxantenna txantenna \
 		frag rts beacon_int:100 htmode \
+		multiple_bssid:0 \
 		num_global_macaddr
 	json_get_values basic_rate_list basic_rate
 	json_get_values scan_list scan_list
@@ -1111,7 +1133,7 @@ drv_mac80211_setup() {
 	mac80211_prepare_iw_htmode
 	for_each_interface "sta adhoc mesh monitor" mac80211_prepare_vif
 	NEWAPLIST=
-	for_each_interface "ap" mac80211_prepare_vif
+	for_each_interface "ap" mac80211_prepare_vif ${multiple_bssid}
 	NEW_MD5=$(test -e "${hostapd_conf_file}" && md5sum ${hostapd_conf_file})
 	OLD_MD5=$(uci -q -P /var/state get wireless._${phy}.md5)
 	if [ "${NEWAPLIST}" != "${OLDAPLIST}" ]; then

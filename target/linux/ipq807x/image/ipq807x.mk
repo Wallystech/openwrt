@@ -36,6 +36,15 @@ define Device/cig_wf194
 endef
 TARGET_DEVICES += cig_wf194
 
+define Device/cig_wf194c4
+  DEVICE_TITLE := CIG WF194C4
+  DEVICE_DTS := qcom-ipq807x-wf194c4
+  DEVICE_DTS_CONFIG=config@hk09
+  SUPPORTED_DEVICES := cig,wf194c4
+  DEVICE_PACKAGES := ath11k-wifi-cig-wf194c4 aq-fw-download uboot-envtools kmod-usb3 kmod-usb2
+endef
+TARGET_DEVICES += cig_wf194c4
+
 define Device/edgecore_eap102
   DEVICE_TITLE := Edgecore EAP102
   DEVICE_DTS := qcom-ipq807x-eap102

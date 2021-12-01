@@ -72,6 +72,7 @@ qxwlan,e2600ac-c2)
 	;;
 edgecore,ecw5211 |\
 edgecore,spw2ac1200 |\
+edgecore,spw2ac1200-lan-poe |\
 cig,wf610d |\
 zyxel,nbg6617 |\
 zyxel,wre6606)

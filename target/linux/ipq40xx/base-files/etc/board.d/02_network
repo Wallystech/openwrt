@@ -15,6 +15,7 @@ ipq40xx_setup_interfaces()
 	8dev,habanero-dvk|\
 	8dev,jalapeno|\
 	alfa-network,ap120c-ac|\
+	edgecore,spw2ac1200-lan-poe |\
 	engenius,emr3500|\
 	engenius,ens620ext|\
 	luma,wrtq-329acn|\

@@ -48,14 +48,17 @@ hostapd_append_wpa_key_mgmt() {
 		;;
 		eap192)
 			append wpa_key_mgmt "WPA-EAP-SUITE-B-192"
+			append wpa_key_mgmt "WPA-EAP-SHA256"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
-			[ "${ieee80211w:-0}" -gt 0 ] && append wpa_key_mgmt "WPA-EAP-SHA256"
 		;;
-		eap-eap192)
-			append wpa_key_mgmt "WPA-EAP-SUITE-B-192"
+		eap-eap256)
 			append wpa_key_mgmt "WPA-EAP"
+			append wpa_key_mgmt "WPA-EAP-SHA256"
 			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
-			[ "${ieee80211w:-0}" -gt 0 ] && append wpa_key_mgmt "WPA-EAP-SHA256"
+		;;
+		eap256)
+			append wpa_key_mgmt "WPA-EAP-SHA256"
+			[ "${ieee80211r:-0}" -gt 0 ] && append wpa_key_mgmt "FT-EAP"
 		;;
 		sae)
 			append wpa_key_mgmt "SAE"
@@ -360,6 +363,8 @@ hostapd_common_add_bss_config() {
 
 	config_add_int eap_server
 	config_add_string eap_user_file ca_cert server_cert private_key private_key_passwd server_id
+	
+	config_add_boolean ratelimit
 }
 
 hostapd_set_vlan_file() {
@@ -603,11 +608,11 @@ hostapd_set_bss_options() {
 	}
 
 	case "$auth_type" in
-		sae|owe|eap192|eap-eap192)
+		sae|owe|eap192|eap256)
 			set_default ieee80211w 2
 			set_default sae_require_mfp 1
 		;;
-		psk-sae)
+		psk-sae|eap-eap256)
 			set_default ieee80211w 1
 			set_default sae_require_mfp 1
 		;;
@@ -650,7 +655,7 @@ hostapd_set_bss_options() {
 			vlan_possible=1
 			wps_possible=1
 		;;
-		eap|eap192|eap-eap192)
+		eap|eap192|eap-eap256|eap256)
 			json_get_vars \
 				auth_server auth_secret auth_port \
 				dae_client dae_secret dae_port \
@@ -754,7 +759,7 @@ hostapd_set_bss_options() {
 	}
 
 	append bss_conf "ssid=$ssid" "$N"
-	[ -n "$network_bridge" ] && append bss_conf "bridge=$network_bridge" "$N"
+	[ -n "$network_bridge" ] && append bss_conf "bridge=$network_bridge${N}wds_bridge=" "$N"
 	[ -n "$network_ifname" ] && append bss_conf "snoop_iface=$network_ifname" "$N"
 	[ -n "$iapp_interface" ] && {
 		local ifname
@@ -886,7 +891,16 @@ hostapd_set_bss_options() {
 				json_get_vars ieee80211w_mgmt_cipher ieee80211w_max_timeout ieee80211w_retry_timeout
 				append bss_conf "ieee80211w=$ieee80211w" "$N"
 				[ "$ieee80211w" -gt "0" ] && {
-					append bss_conf "group_mgmt_cipher=${ieee80211w_mgmt_cipher:-AES-128-CMAC}" "$N"
+					case "$auth_type" in
+					eap192)
+						append bss_conf "group_mgmt_cipher=BIP-GMAC-256" "$N"
+						append bss_conf "group_cipher=GCMP-256" "$N"
+						;;
+					*)
+						append bss_conf "group_mgmt_cipher=${ieee80211w_mgmt_cipher:-AES-128-CMAC}" "$N"
+						;;
+					esac
+
 					[ -n "$ieee80211w_max_timeout" ] && \
 						append bss_conf "assoc_sa_query_max_timeout=$ieee80211w_max_timeout" "$N"
 					[ -n "$ieee80211w_retry_timeout" ] && \
@@ -974,7 +988,6 @@ hostapd_set_bss_options() {
 		[ -n "$iw_network_auth_type" ] && \
 			append bss_conf "network_auth_type=$iw_network_auth_type" "$N"
 		[ -n "$iw_gas_address3" ] && append bss_conf "gas_address3=$iw_gas_address3" "$N"
-		[ -n "$iw_qos_map_set" ] && append bss_conf "qos_map_set=$iw_qos_map_set" "$N"
 
 		json_for_each_item append_iw_roaming_consortium iw_roaming_consortium
 		json_for_each_item append_iw_anqp_elem iw_anqp_elem
@@ -993,6 +1006,12 @@ hostapd_set_bss_options() {
 			append bss_conf "anqp_3gpp_cell_net=$iw_anqp_3gpp_cell_net_conf" "$N"
 	fi
 
+	set_default iw_qos_map_set 0,0,2,16,1,1,255,255,18,22,24,38,40,40,44,46,48,56
+	case "$iw_qos_map_set" in
+		*,*);;
+		*) iw_qos_map_set="";;
+	esac
+	[ -n "$iw_qos_map_set" ] && append bss_conf "qos_map_set=$iw_qos_map_set" "$N"
 
 	local hs20 disable_dgaf osen anqp_domain_id hs20_deauth_req_timeout \
 		osu_ssid hs20_wan_metrics hs20_operating_class hs20_t_c_filename hs20_t_c_timestamp \
@@ -1200,10 +1219,10 @@ wpa_supplicant_add_network() {
 		default_disabled
 
 	case "$auth_type" in
-		sae|owe|eap192|eap-eap192)
+		sae|owe|eap-eap256)
 			set_default ieee80211w 2
 		;;
-		psk-sae)
+		psk-sae|eap192|eap256)
 			set_default ieee80211w 1
 		;;
 	esac
@@ -1281,7 +1300,7 @@ wpa_supplicant_add_network() {
 			fi
 			append network_data "$passphrase" "$N$T"
 		;;
-		eap|eap192|eap-eap192)
+		eap|eap192|eap-eap256|eap256)
 			hostapd_append_wpa_key_mgmt
 			key_mgmt="$wpa_key_mgmt"
 

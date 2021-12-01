@@ -23,9 +23,13 @@ platform_check_image() {
 	cig,wf188|\
 	cig,wf188n|\
 	cig,wf194c|\
+	cig,wf194c4|\
+	wallys,dr6018|\
 	edgecore,eap101|\
 	edgecore,eap102|\
 	edgecore,eap106|\
+	hfcl,ion4xi|\
+	hfcl,ion4xe|\
 	tplink,ex227|\
 	tplink,ex447|\
 	qcom,ipq6018-cp01|\
@@ -50,10 +54,14 @@ platform_do_upgrade() {
 		;;
 	cig,wf188n|\
 	cig,wf194c|\
+	cig,wf194c4|\
+	hfcl,ion4xi|\
+	hfcl,ion4xe|\
 	qcom,ipq6018-cp01|\
 	qcom,ipq807x-hk01|\
 	qcom,ipq807x-hk14|\
 	qcom,ipq5018-mp03.3|\
+	wallys,dr6018|\
 	tplink,ex447|\
 	tplink,ex227)	
 		nand_upgrade_tar "$1"
